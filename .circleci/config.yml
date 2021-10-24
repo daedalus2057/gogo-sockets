@@ -33,11 +33,6 @@ jobs:
             gotestsum --junitfile /tmp/test-reports/unit-tests.xml
       - store_test_results:
           path: /tmp/test-reports
-  build_and_push_to_ecr:
-    aws-ecr/build-and-push-image:
-      repo: gogo-sockets
-      create: true # if it does not exist
-      tag: "${CIRCLE_SHA1}"
 
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
@@ -46,4 +41,7 @@ workflows:
     # Inside the workflow, you define the jobs you want to run.
     jobs:
       - build
-      - build_and_push_to_ecr
+      - aws-ecr/build-and-push-image:
+          repo: gogo-sockets
+          create: true # if it does not exist
+          tag: "${CIRCLE_SHA1}"
