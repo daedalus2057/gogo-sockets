@@ -43,5 +43,5 @@ workflows:
       - build
       - aws-ecr/build-and-push-image:
           repo: gogo-sockets
-          create: true # if it does not exist
+          create-repo: true # if it does not exist
           tag: "${CIRCLE_SHA1}"
