@@ -12,6 +12,7 @@ const (
 type Game struct {
   GameId string
   State GameState
+  // by convention, first player is host
   Players []string
 }
 

@@ -33,19 +33,18 @@ func (h *Hub) run() {
 	for {
 		select {
 		case client := <-h.register:
-			h.clients[client.clientId] = client
-      //client.send <- /*TODO*/
+			h.clients[client.ClientId] = client
 		case client := <-h.unregister:
-			if _, ok := h.clients[client.clientId]; ok {
-				delete(h.clients, client.clientId)
-				close(client.send)
+			if _, ok := h.clients[client.ClientId]; ok {
+				delete(h.clients, client.ClientId)
+				close(client.Send)
 			}
 		case message := <-h.broadcast:
 			for clientId, client := range h.clients {
 				select {
-				case client.send <- message:
+				case client.Send <- message:
 				default:
-					close(client.send)
+					close(client.Send)
 					delete(h.clients, clientId)
 				}
 			}

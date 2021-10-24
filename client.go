@@ -42,33 +42,33 @@ var upgrader = websocket.Upgrader{
 
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
-	hub *Hub
+	Hub *Hub
 
   // The client identifier
-  clientId string
+  ClientId string
 
 	// The websocket connection.
-	conn *websocket.Conn
+	Conn *websocket.Conn
 
 	// Buffered channel of outbound messages.
-	send chan []byte
+	Send chan []byte
 }
 
-// readPump pumps messages from the websocket connection to the hub.
+// readPump pumps messages from the websocket connection to HandleMessage.
 //
 // The application runs readPump in a per-connection goroutine. The application
 // ensures that there is at most one reader on a connection by executing all
 // reads from this goroutine.
 func (c *Client) readPump() {
 	defer func() {
-		c.hub.unregister <- c
-		c.conn.Close()
+		c.Hub.unregister <- c
+		c.Conn.Close()
 	}()
-	c.conn.SetReadLimit(maxMessageSize)
-	c.conn.SetReadDeadline(time.Now().Add(pongWait))
-	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	c.Conn.SetReadLimit(maxMessageSize)
+	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
+	c.Conn.SetPongHandler(func(string) error { c.Conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		_, message, err := c.conn.ReadMessage()
+		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
@@ -76,7 +76,7 @@ func (c *Client) readPump() {
 			break
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		c.hub.broadcast <- message
+    HandleMessage(c, message)
 	}
 }
 
@@ -89,37 +89,37 @@ func (c *Client) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		c.conn.Close()
+		c.Conn.Close()
 	}()
 	for {
 		select {
-		case message, ok := <-c.send:
-			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+		case message, ok := <-c.Send:
+			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The hub closed the channel.
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 
-			w, err := c.conn.NextWriter(websocket.TextMessage)
+			w, err := c.Conn.NextWriter(websocket.TextMessage)
 			if err != nil {
 				return
 			}
 			w.Write(message)
 
 			// Add queued chat messages to the current websocket message.
-			n := len(c.send)
+			n := len(c.Send)
 			for i := 0; i < n; i++ {
 				w.Write(newline)
-				w.Write(<-c.send)
+				w.Write(<-c.Send)
 			}
 
 			if err := w.Close(); err != nil {
 				return
 			}
 		case <-ticker.C:
-			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
 		}
@@ -192,9 +192,9 @@ func authAndRegister(hub *Hub, conn *websocket.Conn) {
   }
 
   // in memory client -- identifed by memory address
-  client := &Client{clientId: initMsg.ClientId, hub: hub, conn: conn, send: make(chan []byte, 256)}
+  client := &Client{ClientId: initMsg.ClientId, Hub: hub, Conn: conn, Send: make(chan []byte, 256)}
 
-	client.hub.register <- client
+	client.Hub.register <- client
 
   // welcome to the app
   velcomen, _ := MakeMessage("INIT", nil)
@@ -206,18 +206,6 @@ func authAndRegister(hub *Hub, conn *websocket.Conn) {
 	go client.readPump()
 }
 
-func MakeMessage(header string, body []byte) ([]byte, error) {
-  if len(header) > 32 {
-    return nil, errors.New("Invalid header")
-  }
-
-  // pad the header
-  header = fmt.Sprintf("%-32s", header)
-  // prepend the header
-  msg := append([]byte(header), body...)
-
-  return msg, nil
-}
 
 // Handles the message, including sending an error if required
 func HandleMessage(client *Client, msg []byte) {
@@ -235,15 +223,42 @@ func HandleMessage(client *Client, msg []byte) {
       return
     }
 
-    gbytes, err := json.Marshal(gls)
+    err = MarshalAndSend(client, "GAMES", gls, false)
     if err != nil {
       SendError(client, err)
       return
     }
 
-    msg, err := MakeMessage("GAMES", gbytes)
+  case "GAME_REQ":
+    req := struct { Action string }{}
 
-    client.send <- msg
+    err := json.Unmarshal(msg[:32], &req)
+    if err != nil {
+      SendError(client, err)
+    }
+
+    switch req.Action {
+    case "CREATE":
+      // this player will be the host
+      g := game.CreateGame(client.ClientId)
+      err := MarshalAndSend(client, "START_WAIT", g, false)
+      if err != nil {
+        SendError(client, err)
+      }
+
+      // broadcast the new game list
+      gls, err := game.AllGames()
+      if err != nil {
+        SendError(client, err)
+      }
+
+      err = MarshalAndSend(client, "GAMES", gls, true)
+      if err != nil {
+        SendError(client, err)
+      }
+
+      return
+    }
 
   default:
     SendError(client, fmt.Errorf("Unknown message header %q", header))
@@ -251,6 +266,37 @@ func HandleMessage(client *Client, msg []byte) {
 
 }
 
+func MakeMessage(header string, body []byte) ([]byte, error) {
+  if len(header) > 32 {
+    return nil, errors.New("Invalid header")
+  }
+
+  // pad the header
+  header = fmt.Sprintf("%-32s", header)
+  // prepend the header
+  msg := append([]byte(header), body...)
+
+  return msg, nil
+}
+
+func MarshalAndSend(client *Client, header string, body interface{}, broadcast bool) (error) {
+      // send the start wait message
+      mbytes, err := json.Marshal(body)
+      if err != nil {
+        return err
+      }
+
+      msg, err := MakeMessage(header, mbytes)
+
+      if (broadcast) {
+        client.Hub.broadcast <- msg
+        return nil
+      }
+
+      client.Send <- msg
+      return nil
+}
+
 func SendError(client *Client, err error) {
-  client.send <- []byte(fmt.Sprintf("An error occured: %v", err))
+  client.Send <- []byte(fmt.Sprintf("An error occured: %v", err))
 }
