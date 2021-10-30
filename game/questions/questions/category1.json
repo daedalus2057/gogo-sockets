@@ -1,0 +1,181 @@
+{
+	"categories" : [
+		{
+			"category" : "german verbs",
+			"questions" : [
+				{
+					"question" : "tanzen",
+					"correct" : "to dance",
+					"incorrect" : [
+						"to take",
+						"to drive",
+						"to run"
+					]
+				},
+				{
+					"question" : "meinen",
+					"correct" : "to think, mean",
+					"incorrect" : [
+						"to feel",
+						"to give (to someone)",
+						"to taste"
+					]
+				},
+				{
+					"question" : "gefallen",
+					"correct" : "to be pleasing, like",
+					"incorrect" : [
+						"to wish",
+						"to desire",
+						"to fall"
+					]
+				},
+				{
+					"question" : "spielen",
+					"correct" : "to play",
+					"incorrect" : [
+						"to spill",
+						"to be",
+						"to dance"
+					]
+				},
+				{
+					"question" : "nehmen",
+					"correct" : "to take",
+					"incorrect" : [
+						"to participate",
+						"to name",
+						"to know"
+					]
+				},
+				{
+					"question" : "treten",
+					"correct" : "to step",
+					"incorrect" : [
+						"to fall",
+						"to treat (to something)",
+						"to take (something)"
+					]
+				}
+			]
+		},
+		{
+			"category" : "orchestral instruments",
+			"questions" : [
+				{
+					"question" : "Which of the following is not a brass instrument?",
+					"correct" : "Bassoon",
+					"incorrect" : [
+						"Trumpet",
+						"French Horn",
+						"Cornet"
+					]
+				},
+				{
+					"question" : "Which of these percussion instruments is not played with mallets?",
+					"correct" : "Claves",
+					"incorrect" : [
+						"Timpani",
+						"Glockenspiel",
+						"Marimba"
+					]
+				},
+				{
+					"question" : "Which of the following instruments isn't typically valved?",
+					"correct" : "Trombone",
+					"incorrect" : [
+						"Tuba",
+						"French Horn",
+						"Trumpet"
+					]
+				},
+				{
+					"question" : "Which of the following is not a double reed instrument?",
+					"correct" : "Bass Clarinet",
+					"incorrect" : [
+						"Bassoon",
+						"Oboe",
+						"English Horn"
+					]
+				},
+				{
+					"question" : "Which of the following string instruments is not traditionally an orchestral instrument?",
+					"correct" : "Lute",
+					"incorrect" : [
+						"Double Bass",
+						"Viola",
+						"Harp"
+					]
+				},
+				{
+					"question" : "From what material are the strings of stringed instrument bows typically made?",
+					"correct" : "Horse hair",
+					"incorrect" : [
+						"Nylon",
+						"Cotton",
+						"Hemp"
+					]
+				},
+				{
+					"question" : "Which of the following drums is not typically played with a bare hand?",
+					"correct" : "Snare drum",
+					"incorrect" : [
+						"Tambourine",
+						"Conga drum",
+						"Bongo drum"
+					]
+				}
+			]
+		},
+		{
+			"category" : "sports rules",
+			"questions" : [
+				{
+					"question" : "In American Football, how many points is a safety worth?",
+					"correct" : "2",
+					"incorrect" : [
+						"6",
+						"7",
+						"1"
+					]
+				},
+				{
+					"question" : "In soccer (football), what is the restart after an offside violation?",
+					"correct" : "Indirect freekick",
+					"incorrect" : [
+						"Direct freekick",
+						"Penalty kick",
+						"Goal kick"
+					]
+				},
+				{
+					"question" : "In volleyball, how many hits are allowed on a side before the ball is played over the net?",
+					"correct" : "3",
+					"incorrect" : [
+						"4",
+						"2",
+						"5"
+					]
+				},
+				{
+					"question" : "In baseball, in which of the following situations could the infield fly rule apply?",
+					"correct" : "Runners on first, second, and third; one out",
+					"incorrect" : [
+						"Runners on first, second, and third; two outs",
+						"Runners on first and third; no outs",
+						"Runner on second; one out"
+					]
+				},
+				{
+					"question" : "In basketball (NBA rules), how many personal fouls can you accumulate without getting disqualified?",
+					"correct" : "5",
+					"incorrect" : [
+						"6",
+						"7",
+						"4"
+					]
+				}
+			]
+		}
+	]
+}

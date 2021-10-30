@@ -1,0 +1,113 @@
+{
+	"categories" : [
+		{
+			"category" : "historical figures",
+			"questions" : [
+				{
+					"question" : "Who was George Washington?",
+					"correct" : "First president of the United States",
+					"incorrect" : [
+						"Inventor of the telephone", 
+						"Author of 'The Art of War'",
+						"First man to walk on the moon"
+					]
+				},
+				{
+					"question" : "Who was Jane Austen?",
+					"correct" : "Brisith novelist, author of 'Pride and Prejudice'",
+					"incorrect" : [
+						"American musician, known as the 'Queen of Soul'",
+						"Queen of England during the 16th century",
+						"American scientist famous for her work on the Apollo missions"
+					]
+				},
+				{
+					"question" : "Who was Charles Darwin?",
+					"correct" : "Scientist famous for the theory of evolution",
+					"incorrect" : [
+						"Author of 'The 95 Theses'",
+						"British Prime Minister during World War I",
+						"Inventor of the telegraph"
+					]
+				},
+				{
+					"question" : "Who was William Shakespeare?",
+					"correct" : "English playwrite, author of 'Hamlet'",
+					"incorrect" : [
+						"American president during the War of 1812",
+						"Famous American jazz musician",
+						"Dutch explorer who found the archipelago of Svalbard"
+					]
+				},
+				{
+					"question" : "Who was Confucius?",
+					"correct" : "Chinese philosopher whose teachings are among the most influential in history",
+					"incorrect" : [
+						"Japanese emperor duing Japan's 19th-century modernization ",
+						"Founder of Buddhism",
+						"Founder of the Mongol Empire"
+					]
+				},
+				{
+					"question" : "Who was Grace Hopper?",
+					"correct" : "Pioneer of computer programming",
+					"incorrect" : [
+						"16th-century Irish pirate",
+						"First female aviator to fly solo across the Atlantic",
+						"First woman in space"
+					]
+				}
+			]
+		},
+		{
+			"category" : "bones of the human body",
+			"questions" : [
+				{
+					"question" : "Where is the humerus located?",
+					"correct" : "Upper arm",
+					"incorrect" : [
+						"Foot",
+						"Lower back",
+						"Wrist"
+					]
+				},
+				{
+					"question" : "How many bones does an adult have?",
+					"correct" : "206",
+					"incorrect" : [
+						"232",
+						"193",
+						"201"
+					]
+				},
+				{
+					"question" : "What is the only bone in the body not connected to any other?",
+					"correct" : "Hyoid bone",
+					"incorrect" : [
+						"Femur",
+						"Patella",
+						"Occipital bone"
+					]
+				},
+				{
+					"question" : "What bone is commonly referred to as the kneecap?",
+					"correct" : "Patella",
+					"incorrect" : [
+						"Mandible",
+						"Clavicle",
+						"Scapula"
+					]
+				},
+				{
+					"question" : "Metacarpals are to hands as ___ are to feet.",
+					"correct" : "Metatarsals",
+					"incorrect" : [
+						"Metavarsals",
+						"Petacarpals",
+						"Betacarpals"
+					]
+				}
+			]
+		}
+	]
+}

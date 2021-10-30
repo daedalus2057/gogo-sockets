@@ -1,0 +1,63 @@
+{
+	"categories" : [
+		{
+			"category" : "elemental symbols",
+			"questions" : [
+				{
+					"question" : "Uranium",
+					"correct" : "U",
+					"incorrect" : [
+						"Ur",
+						"Um",
+						"Ua"
+					]
+				},
+				{
+					"question" : "Oxygen",
+					"correct" : "O",
+					"incorrect" : [
+						"On",
+						"Od",
+						"Ox"
+					]
+				},
+				{
+					"question" : "Gold",
+					"correct" : "Au",
+					"incorrect" : [
+						"Ag",
+						"G",
+						"Gd"
+					]
+				},
+				{
+					"question" : "Strontium",
+					"correct" : "Sr",
+					"incorrect" : [
+						"St",
+						"Sn",
+						"Sm"
+					]
+				},
+				{
+					"question" : "Neon",
+					"correct" : "Ne",
+					"incorrect" : [
+						"Kr",
+						"No",
+						"N"
+					]
+				},
+				{
+					"question" : "Lead",
+					"correct" : "Pb",
+					"incorrect" : [
+						"Ld",
+						"Au",
+						"Le"
+					]
+				}
+			]
+		}
+	]
+}

@@ -3,7 +3,7 @@ package game
 import (
   "errors"
   "fmt"
-
+  "gogo-sockets/game/questions"
   "github.com/google/uuid"
   cmap "github.com/orcaman/concurrent-map"
 )
@@ -46,9 +46,22 @@ func GetGame(gameId string) (*Game, bool) {
 
 func CreateGame(host string) *Game {
   gameId := uuid.NewString()
+  
+  // define the host player
+  hostPlayer := Player{
+    PlayerId: host,
+    Score: 0,
+  }
+  
+  // make sure the categories have been loaded
+  if !questions.CategoriesInitialized {
+    questions.PopulateCategories()
+  }
+  
   game := &Game{
     GameId: gameId,
-    Players: []string{ host },
+    Players: []Player{ hostPlayer },
+    Categories: questions.GetGameCategories(),
   }
 
   gMap.Set(gameId, game)
@@ -62,7 +75,11 @@ func JoinGame(gameId, player string) (*Game, error) {
     return nil, fmt.Errorf("Unknown game: %q", gameId)
   }
 
-  
+  // define the new player
+  newPlayer := Player{
+    PlayerId: player,
+	Score: 0,
+  }
 
   if g.State != WAITING {
     return nil, errors.New("Game not waiting for players")
@@ -72,7 +89,11 @@ func JoinGame(gameId, player string) (*Game, error) {
     return nil, errors.New("Game already has more than 2 players")
   }
 
-  g.Players = append(g.Players, player)
+  g.Players = append(g.Players, newPlayer)
+
+  if len(g.Players) == 3 {
+    g.State = START_ROUND
+  }
 
   gMap.Set(g.GameId, g)
   
