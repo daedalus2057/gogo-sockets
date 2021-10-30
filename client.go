@@ -312,6 +312,73 @@ func HandleMessage(client *Client, msg []byte) {
       }
     }
 
+  case "GAMEPLAY":
+    // unmarshal the message to get the gameplay req type
+	reqPart := struct { Request string `json:"req"`
+						GameId string `json:"gameId"`}{}
+	
+	err := json.Unmarshal(msg[:32], &reqPart)
+	if err != nil {
+		SendError(client, err)
+	}
+	
+	switch req.Request {
+	  case "WHEEL_SPIN":
+		reqFull := struct { Request string `json:"req"`
+							GameId string `json:"gameId"`
+							SpinValue float32 `json:"spinValue"`}{}
+		err := json.Unmarshal(msg[:32], &reqFull)
+		if err != nil {
+			SendError(client, err)
+		}
+			
+		// TODO: create a wheel spun message and send it to the other clients
+		
+		return
+		
+	  case "QUESTION_SELECT":
+		reqFull := struct { Request string `json:"req"`
+							GameId string `json:"gameId"`
+							Category string 	`json:"category"`
+							PointValue uint		`json:"pointValue"`}{}
+		err := json.Unmarshal(msg[:32], &reqFull)
+		if err != nil {
+			SendError(client, err)
+		}
+		
+		// TODO: get the question and send it back to everyone
+		
+		return
+		
+	  case "BUZZ":
+		reqFull := struct { Request string `json:"req"`
+							GameId string `json:"gameId"`
+							Delay float32		`json:"delay"`
+							Expired bool		`json:"expired"`}{}
+		err := json.Unmarshal(msg[:32], &reqFull)
+		if err != nil {
+			SendError(client, err)
+		}
+		
+		// TODO: register the buzz, if this is the third buzz then choose
+		// the current player and send the question to everyone
+		
+		return
+		
+	  case "ANSWER":
+		reqFull := struct { Request string `json:"req"`
+							GameId string `json:"gameId"`
+							AnswerIndex uint	`json:"answerIndex"`}{}
+		err := json.Unmarshal(msg[:32], &reqFull)
+		if err != nil {
+			SendError(client, err)
+		}
+		
+		// TODO: determine if the answer was correct and then send the
+		// answer message back to everyone
+		
+		return
+
   default:
     SendError(client, fmt.Errorf("Unknown message header %q", header))
   }
