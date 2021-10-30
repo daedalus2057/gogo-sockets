@@ -30,6 +30,10 @@ func main() {
     serveWs(hub, w, r)
   })
 
+  // http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+  //   fmt.Fprintf(w,"Listing on port %v", addr)
+  // })
+
   fmt.Println("Listenting on ", *addr)
   err := http.ListenAndServe(*addr, nil)
   if err != nil {

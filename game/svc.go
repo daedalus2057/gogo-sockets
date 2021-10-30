@@ -99,3 +99,31 @@ func JoinGame(gameId, player string) (*Game, error) {
   
   return g, nil
 }
+
+// Removes player from game. If the player is the only player in the
+// game the game is removed. 
+func LeaveGame(gameId, player string) (error) {
+  g, ok := GetGame(gameId)
+  if !ok {
+    return fmt.Errorf("Unknown game: %q", gameId)
+  }
+
+  newPlayers := make([]string, 0)
+  for _, p := range g.Players {
+    if player != p {
+      newPlayers = append(newPlayers, p)
+    }
+  }
+
+  if len(newPlayers) == 0 { 
+    gMap.Remove(gameId)
+    return nil
+  }
+
+
+  // otherwise update the game
+  g.Players = newPlayers
+  gMap.Set(gameId, g)
+
+  return nil
+}

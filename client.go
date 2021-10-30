@@ -214,7 +214,10 @@ func HandleMessage(client *Client, msg []byte) {
     return
   }
 
-  switch header := string(bytes.TrimSpace(msg[:32])); header {
+  header := string(bytes.TrimSpace(msg[:32]))
+  fmt.Println("Processing message: ", header)
+
+  switch header {
   case "INIT":
     // send the games
     gls, err := game.AllGames()
@@ -230,11 +233,12 @@ func HandleMessage(client *Client, msg []byte) {
     }
 
   case "GAME_REQ":
-    req := struct { Action string }{}
+    req := struct { Action, GameId string }{}
 
-    err := json.Unmarshal(msg[:32], &req)
+    err := json.Unmarshal(msg[32:], &req)
     if err != nil {
       SendError(client, err)
+      return
     }
 
     switch req.Action {
@@ -244,20 +248,68 @@ func HandleMessage(client *Client, msg []byte) {
       err := MarshalAndSend(client, "START_WAIT", g, false)
       if err != nil {
         SendError(client, err)
+        return
       }
 
       // broadcast the new game list
       gls, err := game.AllGames()
       if err != nil {
         SendError(client, err)
+        return
       }
 
       err = MarshalAndSend(client, "GAMES", gls, true)
       if err != nil {
         SendError(client, err)
+        return
       }
 
       return
+    case "JOIN":
+      // this player will be the host
+      g, err := game.JoinGame(req.GameId, client.ClientId)
+      if err != nil {
+        SendError(client, err)
+        return
+      }
+
+      err = MarshalAndSend(client, "START_WAIT", g, false)
+      if err != nil {
+        SendError(client, err)
+        return
+      }
+
+      // broadcast the new game list
+      gls, err := game.AllGames()
+      if err != nil {
+        SendError(client, err)
+        return
+      }
+
+      err = MarshalAndSend(client, "GAMES", gls, true)
+      if err != nil {
+        SendError(client, err)
+        return
+      }
+    case "LEAVE":
+      err := game.LeaveGame(req.GameId, client.ClientId)
+      if err != nil {
+        SendError(client, err)
+        return
+      }
+
+      // broadcast the new game list
+      gls, err := game.AllGames()
+      if err != nil {
+        SendError(client, err)
+        return
+      }
+
+      err = MarshalAndSend(client, "GAMES", gls, true)
+      if err != nil {
+        SendError(client, err)
+        return
+      }
     }
 
   default:
@@ -280,6 +332,9 @@ func MakeMessage(header string, body []byte) ([]byte, error) {
 }
 
 func MarshalAndSend(client *Client, header string, body interface{}, broadcast bool) (error) {
+      
+  fmt.Println("Sending message: ", header)
+
       // send the start wait message
       mbytes, err := json.Marshal(body)
       if err != nil {
