@@ -6,6 +6,7 @@ import (
   "gogo-sockets/game/questions"
   "github.com/google/uuid"
   cmap "github.com/orcaman/concurrent-map"
+  "math/rand"
 )
 
 // games "database"
@@ -48,9 +49,10 @@ func CreateGame(host string) *Game {
   gameId := uuid.NewString()
   
   // define the host player
-  hostPlayer := Player{
+  hostPlayer := &Player{
     PlayerId: host,
     Score: 0,
+	CurrentPlayer: true,
   }
   
   // make sure the categories have been loaded
@@ -60,8 +62,9 @@ func CreateGame(host string) *Game {
   
   game := &Game{
     GameId: gameId,
-    Players: []Player{ hostPlayer },
-    Categories: questions.GetGameCategories(),
+    Players: []*Player{ hostPlayer },
+    Categories: questions.GetGameCategories(gameId),
+	RemainingQuestions: 30,
   }
 
   gMap.Set(gameId, game)
@@ -76,9 +79,10 @@ func JoinGame(gameId, player string) (*Game, error) {
   }
 
   // define the new player
-  newPlayer := Player{
+  newPlayer := &Player{
     PlayerId: player,
 	Score: 0,
+	CurrentPlayer: false,
   }
 
   if g.State != WAITING {
@@ -108,9 +112,9 @@ func LeaveGame(gameId, player string) (error) {
     return fmt.Errorf("Unknown game: %q", gameId)
   }
 
-  newPlayers := make([]string, 0)
+  newPlayers := make([]*Player, 0)
   for _, p := range g.Players {
-    if player != p {
+    if player != p.PlayerId {
       newPlayers = append(newPlayers, p)
     }
   }
@@ -127,3 +131,110 @@ func LeaveGame(gameId, player string) (error) {
 
   return nil
 }
+
+
+func QuestionSelect(gameId, category string, pointValue uint8) (Question, error) {
+	g, ok := GetGame(gameId)
+	if !ok {
+		return Question{}, fmt.Errorf("Unknown game: %q", gameId)
+	}
+	
+	qInternal := questions.GetGameQuestion(gameId, category, pointValue)
+	
+	p := rand.Perm(4)
+	choicesList := []string{"", "", "", ""}
+	
+	choicesList[p[0]] = qInternal.Correct
+	choicesList[p[1]] = qInternal.Incorrect[0]
+	choicesList[p[2]] = qInternal.Incorrect[1]
+	choicesList[p[3]] = qInternal.Incorrect[2]
+	
+	qSend := Question{
+		Category: category,
+		PointValue: pointValue,
+		Text: qInternal.QuestionText,
+		Choices: choicesList,
+		correctIndex: uint8(p[0]),
+		buzzes: []*Buzz{},
+	}
+	
+	g.currentQuestion = &qSend
+	
+	return qSend, nil
+}
+
+
+func RegisterBuzz(gameId, clientId string, delay uint32, expired bool) (bool, error) {
+	g, ok := GetGame(gameId)
+	if !ok {
+		return false, fmt.Errorf("Unknown game: %q", gameId)
+	}
+	
+	buzz := Buzz{
+		playerId: clientId,
+		delay: delay,
+		expired: expired,
+	}
+	
+	g.currentQuestion.buzzes = append(g.currentQuestion.buzzes, &buzz)
+
+	if len(g.currentQuestion.buzzes) == 3 {
+		return true, nil
+	} else {
+		return false, nil
+	}
+}
+
+func GetNewCurrentPlayer(gameId string) (bool, string, error) {
+	g, ok := GetGame(gameId)
+	if !ok {
+		return false, "", fmt.Errorf("Unknown game: %q", gameId)
+	}
+	
+	minDelay := uint32(0xFFFFFFFF)
+	retId := ""
+	for _, buzz := range(g.currentQuestion.buzzes) {
+		if !buzz.expired && buzz.delay < minDelay {
+			minDelay = buzz.delay
+			retId = buzz.playerId
+		}
+	}
+	
+	if retId != "" {
+		return false, retId, nil
+	} else {
+		return true, retId, nil
+	}
+}
+
+func IncomingAnswer(gameId, clientId string, answerIndex uint8) (bool, *Game, error) {
+	g, ok := GetGame(gameId)
+	if !ok {
+		return false, &Game{}, fmt.Errorf("Unknown game: %q", gameId)
+	}
+
+	player := g.GetPlayerByUuid(clientId)
+	if player == nil {
+		return false, &Game{}, fmt.Errorf("Player %q not in game %q", clientId, gameId)
+	}
+	
+	if g.currentQuestion.correctIndex == answerIndex {
+		player.updateScore(g.currentQuestion.PointValue, true)
+	} else {
+		player.updateScore(g.currentQuestion.PointValue, false)
+	}
+	
+	// we are done with this question
+	questions.RemoveGameQuestion(gameId, g.currentQuestion.Category, g.currentQuestion.PointValue)
+	g.currentQuestion = nil
+	g.RemainingQuestions -= 1
+	
+	return false, g, nil
+
+}
+
+
+
+
+
+

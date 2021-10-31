@@ -54,6 +54,24 @@ func testCreateJoinJoin() bool {
     fmt.Printf("joinGame successful, game = %+v\n\n", joinedGame)
   }
   
+  game.QuestionSelect(createdGame.GameId, createdGame.Categories[1], 30)
+
+  full, err := game.RegisterBuzz(createdGame.GameId, playerId0, 4328912, false)
+  fmt.Println(full)
+  full, err = game.RegisterBuzz(createdGame.GameId, playerId1, 8293, false)
+  fmt.Println(full)
+  full, err = game.RegisterBuzz(createdGame.GameId, playerId2, 3459032, false)
+  fmt.Println(full)
+
+  answered, id, err := game.GetNewCurrentPlayer(createdGame.GameId)
+  fmt.Println(answered)
+  fmt.Printf("new current player: %s\n", id)
+
+  a, b, c := game.IncomingAnswer(createdGame.GameId, playerId1, 2)
+  fmt.Println(a)
+  fmt.Printf("%+v\n", b)
+  fmt.Println(c)
+  
   
   gbytes, err := json.Marshal(createdGame)
   if err != nil {
@@ -63,10 +81,11 @@ func testCreateJoinJoin() bool {
   
   //fmt.Println(gbytes)
   testMsg := struct {
-    GameId string `json:"GameId"`
-	State int `json:"State"`
-	Players []game.Player `json:"Players"`
-	Categories []string `json:"Categories"`
+    GameId string `json:"gameId"`
+	State int `json:"state"`
+	Players []game.Player `json:"players"`
+	Categories []string `json:"categories"`
+	RemainingQuestions uint8 `json:"remainingQuestions"`
   }{}
   err = json.Unmarshal(gbytes, &testMsg)
   if err != nil {
@@ -77,7 +96,7 @@ func testCreateJoinJoin() bool {
   fmt.Printf("marshaled and unmarshaled game = %+v\n\n", testMsg)
   //fmt.Println("%d", err)
   fmt.Println("TEST DONE")
-  
+
   return true
   
 }
@@ -105,6 +124,4 @@ func main() {
   }
   
   return
-  
-  
 }

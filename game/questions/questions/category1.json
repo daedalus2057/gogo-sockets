@@ -176,6 +176,115 @@
 					]
 				}
 			]
+		},
+		{
+			"category" : "world capitals",
+			"questions" : [
+				{
+					"question" : "What is the capital of Germany?",
+					"correct" : "Berlin",
+					"incorrect" : [
+						"Munich",
+						"Bonn",
+						"Hamburg"
+					]
+				},
+				{
+					"question" : "What is the capital of China?",
+					"correct" : "Beijing",
+					"incorrect" : [
+						"Shanghai",
+						"Guangzhou",
+						"Nanjing"
+					]
+				},
+				{
+					"question" : "What is the capital of Brazil?",
+					"correct" : "Brasilia",
+					"incorrect" : [
+						"Rio de Janiero",
+						"Sao Paulo",
+						"Fortaleza"
+					]
+				},
+				{
+					"question" : "Which of the following is NOT a capital of South Africa?",
+					"correct" : "Johannesburg",
+					"incorrect" : [
+						"Pretoria",
+						"Bloemfontein",
+						"Cape Town"
+					]
+				},
+				{
+					"question" : "What is the capital of Kyrgyzstan?",
+					"correct" : "Bishkek",
+					"incorrect" : [
+						"Tashkent",
+						"Samarkand",
+						"Ashgabat"
+					]
+				}, 
+				{
+					"question" : "What is the capital of Burkina Faso?",
+					"correct" : "Ouagadougou",
+					"incorrect" : [
+						"Koudougou",
+						"Bobo-Dioulasso",
+						"Yamoussoukro"
+					]
+				}
+			]
+		},
+		{
+			"category" : "board games",
+			"questions" : [
+				{
+					"question" : "Which of the following is NOT a chess piece?",
+					"correct" : "lancer",
+					"incorrect" : [
+						"rook",
+						"pawn",
+						"bishop"
+					]
+				},
+				{
+					"question" : "What are the dimensions of a standard Go (Baduk) board?",
+					"correct" : "19x19",
+					"incorrect" : [
+						"13x13",
+						"8x8",
+						"16x16"
+					]
+				},
+				{
+					"question" : "Which of the following is NOT a resource in Settlers of Catan?",
+					"correct" : "Fish",
+					"incorrect" : [
+						"Ore",
+						"Sheep",
+						"Wheat"
+					]
+				},
+				{
+					"question" : "Which of the following Stratego pieces can capture the Marshal?",
+					"correct" : "spy",
+					"incorrect" : [
+						"general",
+						"scout",
+						"colonel"
+					]
+				},
+				{
+					"question" : "Which of the following letters is the most valuable in Scrabble?",
+					"correct" : "K",
+					"incorrect" : [
+						"C",
+						"G",
+						"H"
+					]
+				}
+			]
 		}
 	]
 }

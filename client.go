@@ -353,7 +353,7 @@ func HandleMessage(client *Client, msg []byte) {
 	  case "BUZZ":
 		reqFull := struct { Request string `json:"req"`
 							GameId string `json:"gameId"`
-							Delay float32		`json:"delay"`
+							Delay uint32		`json:"delay"`
 							Expired bool		`json:"expired"`}{}
 		err := json.Unmarshal(msg[:32], &reqFull)
 		if err != nil {
