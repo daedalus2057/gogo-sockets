@@ -45,7 +45,7 @@ func testCreateJoinJoin() bool {
     fmt.Println("createdGame and joinGame not the same after two joins")
 	return false
   } else if joinedGame.State != 2 {
-    fmt.Println("unexpected state %d, expected %d", joinedGame.State, game.START_ROUND)
+    fmt.Println("unexpected state %d, expected %d", joinedGame.State, game.STARTED)
 	return false
   } else if err != nil {
     fmt.Println("joinGame failed: ", err)
@@ -67,11 +67,11 @@ func testCreateJoinJoin() bool {
   fmt.Println(answered)
   fmt.Printf("new current player: %s\n", id)
 
-  a, b, c := game.IncomingAnswer(createdGame.GameId, playerId1, 2)
+  a, b, c, d := game.IncomingAnswer(createdGame.GameId, playerId1, 2)
   fmt.Println(a)
-  fmt.Printf("%+v\n", b)
-  fmt.Println(c)
-  
+  fmt.Println(b)
+  fmt.Printf("%+v\n", c)
+  fmt.Println(d)
   
   gbytes, err := json.Marshal(createdGame)
   if err != nil {

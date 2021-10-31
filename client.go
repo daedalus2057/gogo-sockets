@@ -333,8 +333,21 @@ func HandleMessage(client *Client, msg []byte) {
 		}
 			
 		// TODO: create a wheel spun message and send it to the other clients
+		// doesn't need any handling from game package
 		
-		return
+		spinFwd := struct { gameId string `json:"gameId"`
+							gameState game.GameState `json:"gameState"`
+							playerId string `json:"playerId"`
+							spinValue float32 `json:"spinValue"`}{}	
+		spinFwd.gameId = reqFull.GameId
+		//spinFwd.playerId = client.ClientId
+		spinFwd.spinValue = reqFull.SpinValue
+		
+		err = MarshalAndSend(client, "WHEEL_SPUN", spinFwd, true)
+        if err != nil {
+          SendError(client, err)
+          return
+        }
 		
 	  case "QUESTION_SELECT":
 		reqFull := struct { Request string `json:"req"`
@@ -347,8 +360,20 @@ func HandleMessage(client *Client, msg []byte) {
 		}
 		
 		// TODO: get the question and send it back to everyone
+		q, err := game.QuestionSelect(reqFull.GameId,
+									  reqFull.Category
+									  reqFull.PointValue
+		)
+		if err != nil {
+			SendError(client, err)
+		}
 		
-		return
+		// send question to everyone
+		err = MarshalAndSend(client, "QUESTION_RESPONSE", q, true)
+        if err != nil {
+          SendError(client, err)
+          return
+        }
 		
 	  case "BUZZ":
 		reqFull := struct { Request string `json:"req"`
@@ -363,7 +388,57 @@ func HandleMessage(client *Client, msg []byte) {
 		// TODO: register the buzz, if this is the third buzz then choose
 		// the current player and send the question to everyone
 		
-		return
+		choosePlayer, err := RegisterBuzz(reqFull.GameId, 
+										  client.ClientId, 
+										  reqFull.Delay, 
+										  reqFull.Expired
+		)
+		if err != nil {
+			SendError(client, err)
+		}
+		
+		if choosePlayer {
+			
+			expired, newCurrPlayerId, err := GetNewCurrentPlayer(reqFull.GameId)
+			if expired {
+				// call IncomingAnswer with no cliendId
+				correct, correctAnswer, gls, err := game.IncomingAnswer(reqFull.GameId,
+																		"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+																		0
+				)
+				if err != nil {
+					SendError(client, err)
+				}
+				
+				// send answer response message
+				answerResp := struct { correct bool `json:"correct"`
+									   correctAnswer string `json:"correctAnswer"`
+									   game *game.Game `json:"game"`}{}				
+				answerResp.correct = correct
+				answerResp.correctAnswer = correctAnser
+				answerResp.game = gls
+				
+				err = MarshalAndSend(client, "ANSWER_RESPONSE", answerResp, true)
+				if err != nil {
+				  SendError(client, err)
+				  return
+				}
+				
+			} else {
+				// send player selected message
+				playerSelect := struct { gameId string `json:"gameId"`
+										 playerId string `json:"playerId"`}{}
+				playerSelect.gameId = reqFull.GameId
+				playerSelect.playerId = client.ClientId
+				
+				err = MarshalAndSend(client, "PLAYER_SELECTED", playerSelect, true)
+				if err != nil {
+				  SendError(client, err)
+				  return
+				}
+			}
+		
+		} // else, do nothing
 		
 	  case "ANSWER":
 		reqFull := struct { Request string `json:"req"`
@@ -376,9 +451,29 @@ func HandleMessage(client *Client, msg []byte) {
 		
 		// TODO: determine if the answer was correct and then send the
 		// answer message back to everyone
+		// call IncomingAnswer with no cliendId
+		correct, correctAnswer, gls, err := game.IncomingAnswer(reqFull.GameId,
+																client.ClientId,
+																reqFull.AnswerIndex
+		)
+		if err != nil {
+			SendError(client, err)
+		}
 		
-		return
-
+		// send answer response message
+		answerResp := struct { correct bool `json:"correct"`
+							   correctAnswer string `json:"correctAnswer"`
+							   game *game.Game `json:"game"`}{}				
+		answerResp.correct = correct
+		answerResp.correctAnswer = correctAnser
+		answerResp.game = gls
+		
+		err = MarshalAndSend(client, "ANSWER_RESPONSE", answerResp, true)
+		if err != nil {
+		  SendError(client, err)
+		  return
+		}
+		
   default:
     SendError(client, fmt.Errorf("Unknown message header %q", header))
   }

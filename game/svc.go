@@ -96,7 +96,7 @@ func JoinGame(gameId, player string) (*Game, error) {
   g.Players = append(g.Players, newPlayer)
 
   if len(g.Players) == 3 {
-    g.State = START_ROUND
+    g.State = STARTED
   }
 
   gMap.Set(g.GameId, g)
@@ -201,36 +201,35 @@ func GetNewCurrentPlayer(gameId string) (bool, string, error) {
 	}
 	
 	if retId != "" {
+		g.SetCurrentPlayer(retId)
 		return false, retId, nil
 	} else {
 		return true, retId, nil
 	}
 }
 
-func IncomingAnswer(gameId, clientId string, answerIndex uint8) (bool, *Game, error) {
+func IncomingAnswer(gameId, clientId string, answerIndex uint8) (bool, string, *Game, error) {
 	g, ok := GetGame(gameId)
 	if !ok {
-		return false, &Game{}, fmt.Errorf("Unknown game: %q", gameId)
+		return false, "", &Game{}, fmt.Errorf("Unknown game: %q", gameId)
 	}
 
+	correct := false
 	player := g.GetPlayerByUuid(clientId)
-	if player == nil {
-		return false, &Game{}, fmt.Errorf("Player %q not in game %q", clientId, gameId)
-	}
+	if player != nil {
+		correct := g.currentQuestion.correctIndex == answerIndex
+		player.updateScore(g.currentQuestion.PointValue, correct)
+	} // else (actually not an error)
+	  // client.go calls IncomingAnswer with a blank clientId if the question expires
 	
-	if g.currentQuestion.correctIndex == answerIndex {
-		player.updateScore(g.currentQuestion.PointValue, true)
-	} else {
-		player.updateScore(g.currentQuestion.PointValue, false)
-	}
+	correctAnswer := g.currentQuestion.Choices[g.currentQuestion.correctIndex]
 	
 	// we are done with this question
 	questions.RemoveGameQuestion(gameId, g.currentQuestion.Category, g.currentQuestion.PointValue)
 	g.currentQuestion = nil
 	g.RemainingQuestions -= 1
 	
-	return false, g, nil
-
+	return correct, correctAnswer, g, nil
 }
 
 

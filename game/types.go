@@ -4,7 +4,8 @@ type GameState int
 const (
   WAITING GameState = iota
   UNKNOWN
-  START_ROUND
+  STARTED
+  ENDED
 )
 
 type Player struct {
@@ -62,4 +63,14 @@ func (g *Game) GetPlayerByUuid(playerId string) *Player {
 	}
   }
   return nil
+}
+
+func (g *Game) SetCurrentPlayer(playerId string) {
+  for _, player := range g.Players {
+    if player.PlayerId == playerId {
+	  player.CurrentPlayer = true
+	} else {
+	  player.CurrentPlayer = false
+	}
+  }
 }
