@@ -322,7 +322,7 @@ func HandleMessage(client *Client, msg []byte) {
 		SendError(client, err)
 	}
 	
-	switch req.Request {
+	switch reqPart.Request {
 	  case "WHEEL_SPIN":
 		reqFull := struct { Request string `json:"req"`
 							GameId string `json:"gameId"`
@@ -353,7 +353,7 @@ func HandleMessage(client *Client, msg []byte) {
 		reqFull := struct { Request string `json:"req"`
 							GameId string `json:"gameId"`
 							Category string 	`json:"category"`
-							PointValue uint		`json:"pointValue"`}{}
+							PointValue uint8	`json:"pointValue"`}{}
 		err := json.Unmarshal(msg[:32], &reqFull)
 		if err != nil {
 			SendError(client, err)
@@ -361,9 +361,8 @@ func HandleMessage(client *Client, msg []byte) {
 		
 		// TODO: get the question and send it back to everyone
 		q, err := game.QuestionSelect(reqFull.GameId,
-									  reqFull.Category
-									  reqFull.PointValue
-		)
+									  reqFull.Category,
+									  reqFull.PointValue)
 		if err != nil {
 			SendError(client, err)
 		}
@@ -388,24 +387,22 @@ func HandleMessage(client *Client, msg []byte) {
 		// TODO: register the buzz, if this is the third buzz then choose
 		// the current player and send the question to everyone
 		
-		choosePlayer, err := RegisterBuzz(reqFull.GameId, 
-										  client.ClientId, 
-										  reqFull.Delay, 
-										  reqFull.Expired
-		)
+		choosePlayer, err := game.RegisterBuzz(reqFull.GameId, 
+											   client.ClientId, 
+											   reqFull.Delay, 
+											   reqFull.Expired)
 		if err != nil {
 			SendError(client, err)
 		}
 		
 		if choosePlayer {
 			
-			expired, newCurrPlayerId, err := GetNewCurrentPlayer(reqFull.GameId)
+			expired, newCurrPlayerId, err := game.GetNewCurrentPlayer(reqFull.GameId)
 			if expired {
 				// call IncomingAnswer with no cliendId
 				correct, correctAnswer, gls, err := game.IncomingAnswer(reqFull.GameId,
 																		"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-																		0
-				)
+																		0)
 				if err != nil {
 					SendError(client, err)
 				}
@@ -415,7 +412,7 @@ func HandleMessage(client *Client, msg []byte) {
 									   correctAnswer string `json:"correctAnswer"`
 									   game *game.Game `json:"game"`}{}				
 				answerResp.correct = correct
-				answerResp.correctAnswer = correctAnser
+				answerResp.correctAnswer = correctAnswer
 				answerResp.game = gls
 				
 				err = MarshalAndSend(client, "ANSWER_RESPONSE", answerResp, true)
@@ -429,7 +426,7 @@ func HandleMessage(client *Client, msg []byte) {
 				playerSelect := struct { gameId string `json:"gameId"`
 										 playerId string `json:"playerId"`}{}
 				playerSelect.gameId = reqFull.GameId
-				playerSelect.playerId = client.ClientId
+				playerSelect.playerId = newCurrPlayerId
 				
 				err = MarshalAndSend(client, "PLAYER_SELECTED", playerSelect, true)
 				if err != nil {
@@ -443,7 +440,7 @@ func HandleMessage(client *Client, msg []byte) {
 	  case "ANSWER":
 		reqFull := struct { Request string `json:"req"`
 							GameId string `json:"gameId"`
-							AnswerIndex uint	`json:"answerIndex"`}{}
+							AnswerIndex uint8	`json:"answerIndex"`}{}
 		err := json.Unmarshal(msg[:32], &reqFull)
 		if err != nil {
 			SendError(client, err)
@@ -454,8 +451,7 @@ func HandleMessage(client *Client, msg []byte) {
 		// call IncomingAnswer with no cliendId
 		correct, correctAnswer, gls, err := game.IncomingAnswer(reqFull.GameId,
 																client.ClientId,
-																reqFull.AnswerIndex
-		)
+																reqFull.AnswerIndex)
 		if err != nil {
 			SendError(client, err)
 		}
@@ -465,7 +461,7 @@ func HandleMessage(client *Client, msg []byte) {
 							   correctAnswer string `json:"correctAnswer"`
 							   game *game.Game `json:"game"`}{}				
 		answerResp.correct = correct
-		answerResp.correctAnswer = correctAnser
+		answerResp.correctAnswer = correctAnswer
 		answerResp.game = gls
 		
 		err = MarshalAndSend(client, "ANSWER_RESPONSE", answerResp, true)
@@ -480,6 +476,7 @@ func HandleMessage(client *Client, msg []byte) {
 		
   default:
     SendError(client, fmt.Errorf("Unknown message header %q", header))
+  }
   }
 
 }
