@@ -178,13 +178,16 @@ func RemoveGameQuestion(gameId, category string, pointVal uint8) {
 		
 		if !qFound {
 			delete(m, category)
+			
+			// if there are no more categories with questions, the game has ended
+			if len(m) == 0 {
+				gameQuestions.Remove(gameId)
+			}
 		}
 	} else {
 		fmt.Println("question not removed")
 	}
 }
-
-
 
 
 

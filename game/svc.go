@@ -45,6 +45,12 @@ func GetGame(gameId string) (*Game, bool) {
   return g, true
 }
 
+func RemoveGame(gameId string) {
+	
+	gMap.Remove(gameId)
+
+}
+
 func CreateGame(host string) *Game {
   gameId := uuid.NewString()
   
@@ -228,6 +234,10 @@ func IncomingAnswer(gameId, clientId string, answerIndex uint8) (bool, string, *
 	questions.RemoveGameQuestion(gameId, g.currentQuestion.Category, g.currentQuestion.PointValue)
 	g.currentQuestion = nil
 	g.RemainingQuestions -= 1
+	
+	if g.RemainingQuestions == 0 {
+		g.State = ENDED
+	}
 	
 	return correct, correctAnswer, g, nil
 }

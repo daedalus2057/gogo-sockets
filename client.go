@@ -474,6 +474,10 @@ func HandleMessage(client *Client, msg []byte) {
 		  return
 		}
 		
+		if gls.State == game.ENDED {
+			game.RemoveGame(gls.GameId)
+		}
+		
   default:
     SendError(client, fmt.Errorf("Unknown message header %q", header))
   }
