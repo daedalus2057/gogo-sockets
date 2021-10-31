@@ -33,7 +33,7 @@ type CatLoc struct {
 
 var gameQuestions = cmap.New() // gameIds to their questions
 
-var questionDir = filepath.Join("..", "game", "questions", "questions")
+var questionDir = filepath.Join(".", "game", "questions", "questions")
 
 // TODO: does this need to be a cmap (does this need to be threadsafe?)
 var categoryMap = map[string]string{} // map category to the file it is located in
