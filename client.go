@@ -317,17 +317,16 @@ func HandleMessage(client *Client, msg []byte) {
 	reqPart := struct { Request string `json:"req"`
 						GameId string `json:"gameId"`}{}
 	
-	err := json.Unmarshal(msg[:32], &reqPart)
+	err := json.Unmarshal(msg[32:], &reqPart)
 	if err != nil {
 		SendError(client, err)
 	}
-	
 	switch reqPart.Request {
 	  case "WHEEL_SPIN":
 		reqFull := struct { Request string `json:"req"`
 							GameId string `json:"gameId"`
 							SpinValue float32 `json:"spinValue"`}{}
-		err := json.Unmarshal(msg[:32], &reqFull)
+		err := json.Unmarshal(msg[32:], &reqFull)
 		if err != nil {
 			SendError(client, err)
 		}
@@ -335,13 +334,14 @@ func HandleMessage(client *Client, msg []byte) {
 		// TODO: create a wheel spun message and send it to the other clients
 		// doesn't need any handling from game package
 		
-		spinFwd := struct { gameId string `json:"gameId"`
-							gameState game.GameState `json:"gameState"`
-							playerId string `json:"playerId"`
-							spinValue float32 `json:"spinValue"`}{}	
-		spinFwd.gameId = reqFull.GameId
-		//spinFwd.playerId = client.ClientId
-		spinFwd.spinValue = reqFull.SpinValue
+		spinFwd := struct { GameId string `json:"gameId"`
+							PlayerId string `json:"playerId"`
+							SpinValue float32 `json:"spinValue"`}{}	
+		spinFwd.GameId = reqFull.GameId
+		spinFwd.PlayerId = client.ClientId
+		spinFwd.SpinValue = reqFull.SpinValue
+		
+		fmt.Printf("%+v\n", spinFwd)
 		
 		err = MarshalAndSend(client, "WHEEL_SPUN", spinFwd, true)
         if err != nil {
@@ -354,7 +354,7 @@ func HandleMessage(client *Client, msg []byte) {
 							GameId string `json:"gameId"`
 							Category string 	`json:"category"`
 							PointValue uint8	`json:"pointValue"`}{}
-		err := json.Unmarshal(msg[:32], &reqFull)
+		err := json.Unmarshal(msg[32:], &reqFull)
 		if err != nil {
 			SendError(client, err)
 		}
@@ -379,7 +379,7 @@ func HandleMessage(client *Client, msg []byte) {
 							GameId string `json:"gameId"`
 							Delay uint32		`json:"delay"`
 							Expired bool		`json:"expired"`}{}
-		err := json.Unmarshal(msg[:32], &reqFull)
+		err := json.Unmarshal(msg[32:], &reqFull)
 		if err != nil {
 			SendError(client, err)
 		}
@@ -408,12 +408,12 @@ func HandleMessage(client *Client, msg []byte) {
 				}
 				
 				// send answer response message
-				answerResp := struct { correct bool `json:"correct"`
-									   correctAnswer string `json:"correctAnswer"`
-									   game *game.Game `json:"game"`}{}				
-				answerResp.correct = correct
-				answerResp.correctAnswer = correctAnswer
-				answerResp.game = gls
+				answerResp := struct { Correct bool `json:"correct"`
+									   CorrectAnswer string `json:"correctAnswer"`
+									   Game *game.Game `json:"game"`}{}				
+				answerResp.Correct = correct
+				answerResp.CorrectAnswer = correctAnswer
+				answerResp.Game = gls
 				
 				err = MarshalAndSend(client, "ANSWER_RESPONSE", answerResp, true)
 				if err != nil {
@@ -423,10 +423,10 @@ func HandleMessage(client *Client, msg []byte) {
 				
 			} else {
 				// send player selected message
-				playerSelect := struct { gameId string `json:"gameId"`
-										 playerId string `json:"playerId"`}{}
-				playerSelect.gameId = reqFull.GameId
-				playerSelect.playerId = newCurrPlayerId
+				playerSelect := struct { GameId string `json:"gameId"`
+										 PlayerId string `json:"playerId"`}{}
+				playerSelect.GameId = reqFull.GameId
+				playerSelect.PlayerId = newCurrPlayerId
 				
 				err = MarshalAndSend(client, "PLAYER_SELECTED", playerSelect, true)
 				if err != nil {
@@ -441,7 +441,7 @@ func HandleMessage(client *Client, msg []byte) {
 		reqFull := struct { Request string `json:"req"`
 							GameId string `json:"gameId"`
 							AnswerIndex uint8	`json:"answerIndex"`}{}
-		err := json.Unmarshal(msg[:32], &reqFull)
+		err := json.Unmarshal(msg[32:], &reqFull)
 		if err != nil {
 			SendError(client, err)
 		}
@@ -457,12 +457,12 @@ func HandleMessage(client *Client, msg []byte) {
 		}
 		
 		// send answer response message
-		answerResp := struct { correct bool `json:"correct"`
-							   correctAnswer string `json:"correctAnswer"`
-							   game *game.Game `json:"game"`}{}				
-		answerResp.correct = correct
-		answerResp.correctAnswer = correctAnswer
-		answerResp.game = gls
+		answerResp := struct { Correct bool `json:"correct"`
+							   CorrectAnswer string `json:"correctAnswer"`
+							   Game *game.Game `json:"game"`}{}				
+		answerResp.Correct = correct
+		answerResp.CorrectAnswer = correctAnswer
+		answerResp.Game = gls
 		
 		err = MarshalAndSend(client, "ANSWER_RESPONSE", answerResp, true)
 		if err != nil {
@@ -473,10 +473,11 @@ func HandleMessage(client *Client, msg []byte) {
 		if gls.State == game.ENDED {
 			game.RemoveGame(gls.GameId)
 		}
-		
+	  default:
+	    fmt.Println("unknown req type")
+	}
   default:
     SendError(client, fmt.Errorf("Unknown message header %q", header))
-  }
   }
 
 }
@@ -495,14 +496,15 @@ func MakeMessage(header string, body []byte) ([]byte, error) {
 }
 
 func MarshalAndSend(client *Client, header string, body interface{}, broadcast bool) (error) {
-      
+  
   fmt.Println("Sending message: ", header)
-
       // send the start wait message
       mbytes, err := json.Marshal(body)
+
       if err != nil {
         return err
       }
+	  fmt.Println(mbytes)
 
       msg, err := MakeMessage(header, mbytes)
 

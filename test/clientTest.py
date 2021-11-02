@@ -12,7 +12,6 @@ def craftMessage(headerStr, bodyDict):
 
     header = headerStr + (" " * (32 - len(headerStr)))
     body = json.dumps(bodyDict)
-    
     return header + body
 
 def craftInit(clientId):
@@ -107,84 +106,98 @@ def parseIncoming(message):
     body = message[32:]
     print("body = {}".format(body))
     
+def handleCreate():
+    return craftCreate()
+    
+def handleJoin():
+    gameId = input("gameId = ")
+    return craftJoin(gameId)
+
+def handleLeave():
+    gameId = input("gameId = ")
+    return craftLeave(gameId)
+
+def handleSpinWheel():
+    gameId = input("gameId = ")
+    spinValue = float(input("spinValue = "))
+    return craftWheelSpin(gameId, spinValue)
+
+def handleQuestionSelect():
+    gameId = input("gameId = ")
+    category = input("category = ")
+    pointValue = int(input("pointValue = "), 10)
+    return craftQuestionSelect(gameId, category, pointValue)
+
+def handleBuzz():
+    gameId = input("gameId = ")
+    delay = int(input("delay = "), 10)
+    expired = input("expired = ")
+    return craftBuzz(gameId, delay, expired)
+
+def handleAnswer():
+    gameId = input("gameId = ")
+    answerIndex = input("answerIndex = ")
+    return craftAnswer(gameId, answerIndex)
+
+commandMap = {
+    "1" : handleCreate,
+    "2" : handleJoin,
+    "3" : handleLeave,
+    "4" : handleSpinWheel,
+    "5" : handleQuestionSelect,
+    "6" : handleBuzz,
+    "7" : handleAnswer
+}
 
 async def clientMain():
-
-    def handleCreate():
-        return craftCreate()
-    
-    def handleJoin():
-        gameId = input("gameId = ")
-        return craftJoin(gameId)
-    
-    def handleLeave():
-        gameId = input("gameId = ")
-        return craftLeave(gameId)
-    
-    def handleSpinWheel():
-        gameId = input("gameId = ")
-        spinValue = float(input("spinValue = "))
-        return craftWheelSpin(gameId, spinValue)
-    
-    def handleQuestionSelect():
-        gameId = input("gameId = ")
-        category = input("category = ")
-        pointValue = int(input("pointValue = "), 10)
-        return craftQuestionSelect(gameId, category, pointValue)
-    
-    def handleBuzz():
-        gameId = input("gameId = ")
-        delay = int(input("delay = "), 10)
-        expired = input("expired = ")
-        return craftBuzz(gameId, delay, expired)
-    
-    def handleAnswer():
-        gameId = input("gameId = ")
-        answerIndex = input("answerIndex = ")
-        return craftAnswer(gameId, answerIndex)
-
-    commandMap = {
-        "1" : handleCreate,
-        "2" : handleJoin,
-        "3" : handleLeave,
-        "4" : handleSpinWheel,
-        "5" : handleQuestionSelect,
-        "6" : handleBuzz,
-        "7" : handleAnswer
-    }
 
     clientId = str(uuid4())
     initMessage = craftInit(clientId)
 
-    async with websockets.connect("ws://localhost:8080") as websocket:
-        await websocket.send(initMessage)
+    websocket = await websockets.connect("ws://localhost:8080") 
+    
+    await websocket.send(initMessage)
+    
+    asyncio.ensure_future(ws_recv(websocket))
+    asyncio.ensure_future(ws_clientLoop(websocket))
+
+async def ws_recv(websocket):
+    
+    while True:
+        
+        await asyncio.sleep(0.1)
+    
         data = await websocket.recv()
         parseIncoming(data)
-        
-        while True:
-            print("Select command (1 - 8):")
-            print("\t(1) create game")
-            print("\t(2) join game")
-            print("\t(3) leave game")
-            print("\t(4) spin wheel (gameplay)")
-            print("\t(5) select question (gameplay)")
-            print("\t(6) buzz (gameplay)")
-            print("\t(7) answer question (gameplay)")
-            print("\t(8) exit")
-            command = (input()).strip()
-            
-            if command == "8":
-                break
-            
-            message = commandMap[command]()
-            
-            await websocket.send(message)
-            data = await websocket.recv()
-            parseIncoming(data)
-    
-def main():
-    clientId = asyncio.get_event_loop().run_until_complete(clientMain())
-    print(clientId)
 
+async def ws_clientLoop(websocket):
+
+    while True:
+    
+        await asyncio.sleep(0.1)
+
+        print("Select command (1 - 8):")
+        print("\t(1) create game")
+        print("\t(2) join game")
+        print("\t(3) leave game")
+        print("\t(4) spin wheel (gameplay)")
+        print("\t(5) select question (gameplay)")
+        print("\t(6) buzz (gameplay)")
+        print("\t(7) answer question (gameplay)")
+        print("\t(8) exit")
+        command = (input()).strip()
+
+        if not command:
+            continue
+
+        if command != "8":
+            message = commandMap[command]()
+            await websocket.send(message)
+
+def main():
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(clientMain())
+    loop.run_forever()
+    
 if __name__ == "__main__":
     main()
