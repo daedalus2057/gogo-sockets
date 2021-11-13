@@ -357,18 +357,23 @@ func HandleMessage(client *Client, msg []byte) {
 
   case "GAMEPLAY":
     // unmarshal the message to get the gameplay req type
-    reqPart := struct { Request string `json:"req"`
+    reqPart := struct { Request string `json:"request"`
     GameId string `json:"gameId"`}{}
 	
 	err := json.Unmarshal(msg[32:], &reqPart)
 	if err != nil {
 		SendError(client, err)
 	}
+
+  g, ok := game.GetGame(reqPart.GameId)
+  if !ok {
+    SendError(client, fmt.Errorf("Unknown gameId: %v", reqPart.GameId))
+  }
+
 	switch reqPart.Request {
 	  case "WHEEL_SPIN":
-		reqFull := struct { Request string `json:"req"`
-							GameId string `json:"gameId"`
-							SpinValue float32 `json:"spinValue"`}{}
+		reqFull := struct { Request string `json:"request"`
+							SpinFactor int `json:"spinFactor"`}{}
 		err := json.Unmarshal(msg[32:], &reqFull)
 		if err != nil {
 			SendError(client, err)
@@ -376,24 +381,20 @@ func HandleMessage(client *Client, msg []byte) {
 			
 		// create a wheel spun message and send it to the other clients
 		// doesn't need any handling from game package
-		
-		spinFwd := struct { GameId string `json:"gameId"`
+		spinFwd := struct { 
 							PlayerId string `json:"playerId"`
-							SpinValue float32 `json:"spinValue"`}{}	
-		spinFwd.GameId = reqFull.GameId
+							SpinFactor int `json:"spinFactor"`}{}	
 		spinFwd.PlayerId = client.ClientId
-		spinFwd.SpinValue = reqFull.SpinValue
+		spinFwd.SpinFactor = reqFull.SpinFactor
 		
-		fmt.Printf("%+v\n", spinFwd)
-		
-		err = MarshalAndSend(client, "WHEEL_SPUN", spinFwd, true)
+		err = MarshalAndSendToGame(client, g, "WHEEL_SPUN", spinFwd)
         if err != nil {
           SendError(client, err)
           return
         }
 		
 	  case "QUESTION_SELECT":
-		reqFull := struct { Request string `json:"req"`
+		reqFull := struct { Request string `json:"request"`
 							GameId string `json:"gameId"`
 							Category string 	`json:"category"`
 							PointValue uint8	`json:"pointValue"`}{}
@@ -418,7 +419,7 @@ func HandleMessage(client *Client, msg []byte) {
         }
 		
 	  case "BUZZ":
-		reqFull := struct { Request string `json:"req"`
+		reqFull := struct { Request string `json:"request"`
 							GameId string `json:"gameId"`
 							Delay uint32		`json:"delay"`
 							Expired bool		`json:"expired"`}{}
@@ -481,7 +482,7 @@ func HandleMessage(client *Client, msg []byte) {
 		} // else, do nothing
 		
 	  case "ANSWER":
-		reqFull := struct { Request string `json:"req"`
+		reqFull := struct { Request string `json:"request"`
 							GameId string `json:"gameId"`
 							AnswerIndex uint8	`json:"answerIndex"`}{}
 		err := json.Unmarshal(msg[32:], &reqFull)
