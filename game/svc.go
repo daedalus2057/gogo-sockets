@@ -70,7 +70,8 @@ func CreateGame(host string) *Game {
     GameId: gameId,
     Players: []*Player{ hostPlayer },
     Categories: questions.GetGameCategories(gameId),
-	RemainingQuestions: 30,
+	  RemainingQuestions: 30,
+    CurrentPlayerId: host,
   }
 
   gMap.Set(gameId, game)
@@ -112,10 +113,10 @@ func JoinGame(gameId, player string) (*Game, error) {
 
 // Removes player from game. If the player is the only player in the
 // game the game is removed. 
-func LeaveGame(gameId, player string) (error) {
+func LeaveGame(gameId, player string) (*Game, error) {
   g, ok := GetGame(gameId)
   if !ok {
-    return fmt.Errorf("Unknown game: %q", gameId)
+    return nil, fmt.Errorf("Unknown game: %q", gameId)
   }
 
   newPlayers := make([]*Player, 0)
@@ -127,17 +128,33 @@ func LeaveGame(gameId, player string) (error) {
 
   if len(newPlayers) == 0 { 
     gMap.Remove(gameId)
-    return nil
+    return g, nil
   }
 
+  g.State = WAITING
 
   // otherwise update the game
   g.Players = newPlayers
   gMap.Set(gameId, g)
 
-  return nil
+  return g, nil
 }
 
+func UpdateQuestionCount(gameId string, qcount uint8) (*Game, error) {
+
+  g, ok := GetGame(gameId)
+  if !ok {
+    return nil, fmt.Errorf("Unknown game: %q", gameId)
+  }
+
+  g.State = SPIN
+  g.RemainingQuestions = qcount
+
+  // otherwise update the game
+  gMap.Set(gameId, g)
+
+  return g, nil
+}
 
 func QuestionSelect(gameId, category string, pointValue uint8) (Question, error) {
 	g, ok := GetGame(gameId)

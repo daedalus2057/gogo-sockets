@@ -273,7 +273,7 @@ func HandleMessage(client *Client, msg []byte) {
         return
       }
 
-      err = MarshalAndSend(client, "START_WAIT", g, false)
+      err = MarshalAndSendToGame(client, g, "START_WAIT", g)
       if err != nil {
         SendError(client, err)
         return
@@ -292,7 +292,13 @@ func HandleMessage(client *Client, msg []byte) {
         return
       }
     case "LEAVE":
-      err := game.LeaveGame(req.GameId, client.ClientId)
+      g, err := game.LeaveGame(req.GameId, client.ClientId)
+      if err != nil {
+        SendError(client, err)
+        return
+      }
+
+      err = MarshalAndSendToGame(client, g, "START_WAIT", g)
       if err != nil {
         SendError(client, err)
         return
@@ -312,10 +318,47 @@ func HandleMessage(client *Client, msg []byte) {
       }
     }
 
+  case "BEGIN_GAME":
+    // we should have a question count
+    body := struct { 
+      GameId string 
+      QuestionCount uint8 
+    }{}
+
+    err := json.Unmarshal(msg[32:], &body)
+    if err != nil {
+      SendError(client, err)
+    }
+
+    // update the game with the question count and start round
+    g, err := game.UpdateQuestionCount(body.GameId, body.QuestionCount)
+    if err != nil {
+      SendError(client, err)
+    }
+
+    err = MarshalAndSendToGame(client, g, "START_ROUND", g)
+    if err != nil {
+      SendError(client, err)
+      return
+    }
+
+    // broadcast the new game list
+    gls, err := game.AllGames()
+    if err != nil {
+      SendError(client, err)
+      return
+    }
+
+    err = MarshalAndSend(client, "GAMES", gls, true)
+    if err != nil {
+      SendError(client, err)
+      return
+    }
+
   case "GAMEPLAY":
     // unmarshal the message to get the gameplay req type
-	reqPart := struct { Request string `json:"req"`
-						GameId string `json:"gameId"`}{}
+    reqPart := struct { Request string `json:"req"`
+    GameId string `json:"gameId"`}{}
 	
 	err := json.Unmarshal(msg[32:], &reqPart)
 	if err != nil {
@@ -331,7 +374,7 @@ func HandleMessage(client *Client, msg []byte) {
 			SendError(client, err)
 		}
 			
-		// TODO: create a wheel spun message and send it to the other clients
+		// create a wheel spun message and send it to the other clients
 		// doesn't need any handling from game package
 		
 		spinFwd := struct { GameId string `json:"gameId"`
@@ -359,7 +402,7 @@ func HandleMessage(client *Client, msg []byte) {
 			SendError(client, err)
 		}
 		
-		// TODO: get the question and send it back to everyone
+		// get the question and send it back to everyone
 		q, err := game.QuestionSelect(reqFull.GameId,
 									  reqFull.Category,
 									  reqFull.PointValue)
@@ -493,6 +536,18 @@ func MakeMessage(header string, body []byte) ([]byte, error) {
   msg := append([]byte(header), body...)
 
   return msg, nil
+}
+
+func MarshalAndSendToGame(client *Client, g *game.Game, header string, body interface{}) (error) {
+  // TODO: impl
+  for _, p := range g.Players {
+    err := MarshalAndSend(client.Hub.clients[p.PlayerId], header, body, false)
+    if err != nil {
+      return err
+    }
+  }
+
+  return nil
 }
 
 func MarshalAndSend(client *Client, header string, body interface{}, broadcast bool) (error) {

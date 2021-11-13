@@ -6,6 +6,7 @@ const (
   UNKNOWN
   STARTED
   ENDED
+  SPIN
 )
 
 type Player struct {
@@ -50,6 +51,7 @@ type Game struct {
   Players []*Player `json:"players"`
   Categories []string `json:"categories"`
   RemainingQuestions uint8 `json:"remainingQuestions"`
+  CurrentPlayerId string `json:"currentPlayerId"`
   
   // non-exported
   currentQuestion *Question
@@ -59,13 +61,15 @@ type Game struct {
 func (g *Game) GetPlayerByUuid(playerId string) *Player {
   for _, player := range g.Players {
     if player.PlayerId == playerId {
-	  return player
-	}
+      return player
+    }
   }
   return nil
 }
 
 func (g *Game) SetCurrentPlayer(playerId string) {
+  g.CurrentPlayerId = playerId
+
   for _, player := range g.Players {
     if player.PlayerId == playerId {
 	  player.CurrentPlayer = true
