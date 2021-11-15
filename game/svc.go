@@ -82,7 +82,7 @@ func CreateGame(host string) *Game {
 func JoinGame(gameId, player string) (*Game, error) {
   g, ok := GetGame(gameId)
   if !ok {
-    return nil, fmt.Errorf("Unknown game: %q", gameId)
+    return nil, fmt.Errorf("In Join, Unknown game: %q", gameId)
   }
 
   // define the new player
@@ -116,8 +116,9 @@ func JoinGame(gameId, player string) (*Game, error) {
 func LeaveGame(gameId, player string) (*Game, error) {
   g, ok := GetGame(gameId)
   if !ok {
-    return nil, fmt.Errorf("Unknown game: %q", gameId)
+    return nil, fmt.Errorf("In Leave, Unknown game: %q", gameId)
   }
+
 
   newPlayers := make([]*Player, 0)
   for _, p := range g.Players {
@@ -126,9 +127,14 @@ func LeaveGame(gameId, player string) (*Game, error) {
     }
   }
 
+
   if len(newPlayers) == 0 { 
     gMap.Remove(gameId)
-    return g, nil
+    return nil, nil
+  }
+  
+  if g.CurrentPlayerId == player {
+    g.CurrentPlayerId = g.Players[0].PlayerId
   }
 
   g.State = WAITING
@@ -144,7 +150,7 @@ func UpdateQuestionCount(gameId string, qcount uint8) (*Game, error) {
 
   g, ok := GetGame(gameId)
   if !ok {
-    return nil, fmt.Errorf("Unknown game: %q", gameId)
+    return nil, fmt.Errorf("In UpdateQuestionCount, Unknown game: %q", gameId)
   }
 
   g.State = SPIN
@@ -159,7 +165,7 @@ func UpdateQuestionCount(gameId string, qcount uint8) (*Game, error) {
 func QuestionSelect(gameId, category string, pointValue uint8) (Question, error) {
 	g, ok := GetGame(gameId)
 	if !ok {
-		return Question{}, fmt.Errorf("Unknown game: %q", gameId)
+		return Question{}, fmt.Errorf("In QuestionSelect, Unknown game: %q", gameId)
 	}
 	
 	qInternal := questions.GetGameQuestion(gameId, category, pointValue)
@@ -190,7 +196,7 @@ func QuestionSelect(gameId, category string, pointValue uint8) (Question, error)
 func RegisterBuzz(gameId, clientId string, delay uint32, expired bool) (bool, error) {
 	g, ok := GetGame(gameId)
 	if !ok {
-		return false, fmt.Errorf("Unknown game: %q", gameId)
+		return false, fmt.Errorf("In RegisterBuzz, Unknown game: %q", gameId)
 	}
 	
 	buzz := Buzz{
@@ -208,11 +214,7 @@ func RegisterBuzz(gameId, clientId string, delay uint32, expired bool) (bool, er
 	}
 }
 
-func GetNewCurrentPlayer(gameId string) (bool, string, error) {
-	g, ok := GetGame(gameId)
-	if !ok {
-		return false, "", fmt.Errorf("Unknown game: %q", gameId)
-	}
+func SetNewCurrentPlayer(g *Game) (bool, string, error) {
 	
 	minDelay := uint32(0xFFFFFFFF)
 	retId := ""
@@ -234,7 +236,7 @@ func GetNewCurrentPlayer(gameId string) (bool, string, error) {
 func IncomingAnswer(gameId, clientId string, answerIndex uint8) (bool, string, *Game, error) {
 	g, ok := GetGame(gameId)
 	if !ok {
-		return false, "", &Game{}, fmt.Errorf("Unknown game: %q", gameId)
+		return false, "", &Game{}, fmt.Errorf("In IncomingAnswer, Unknown game: %q", gameId)
 	}
 
 	correct := false

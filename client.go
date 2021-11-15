@@ -216,6 +216,7 @@ func HandleMessage(client *Client, msg []byte) {
 
   header := string(bytes.TrimSpace(msg[:32]))
   fmt.Println("Processing message: ", header)
+  fmt.Println("Message body: ", string(msg[32:]))
 
   switch header {
   case "INIT":
@@ -297,11 +298,12 @@ func HandleMessage(client *Client, msg []byte) {
         SendError(client, err)
         return
       }
-
-      err = MarshalAndSendToGame(client, g, "START_WAIT", g)
-      if err != nil {
-        SendError(client, err)
-        return
+      if g != nil { // there are others waiting
+        err = MarshalAndSendToGame(client, g, "START_WAIT", g)
+        if err != nil {
+          SendError(client, err)
+          return
+        }
       }
 
       // broadcast the new game list
@@ -430,6 +432,10 @@ func HandleMessage(client *Client, msg []byte) {
 		
 		// TODO: register the buzz, if this is the third buzz then choose
 		// the current player and send the question to everyone
+    // send this buzz to the game
+    err = MarshalAndSendToGame(client, g, "BUZZED", struct{ 
+      PlayerId string `json:"playerId"`
+      Delay uint32 `json:"delay"`}{ client.ClientId, reqFull.Delay })
 		
 		choosePlayer, err := game.RegisterBuzz(reqFull.GameId, 
 											   client.ClientId, 
@@ -441,10 +447,10 @@ func HandleMessage(client *Client, msg []byte) {
 		
 		if choosePlayer {
 			
-			expired, newCurrPlayerId, err := game.GetNewCurrentPlayer(reqFull.GameId)
+			expired, newCurrPlayerId, err := game.SetNewCurrentPlayer(g)
 			if expired {
 				// call IncomingAnswer with no cliendId
-				correct, correctAnswer, gls, err := game.IncomingAnswer(reqFull.GameId,
+				correct, correctAnswer, ga, err := game.IncomingAnswer(reqFull.GameId,
 																		"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
 																		0)
 				if err != nil {
@@ -457,7 +463,7 @@ func HandleMessage(client *Client, msg []byte) {
 									   Game *game.Game `json:"game"`}{}				
 				answerResp.Correct = correct
 				answerResp.CorrectAnswer = correctAnswer
-				answerResp.Game = gls
+				answerResp.Game = ga
 				
 				err = MarshalAndSend(client, "ANSWER_RESPONSE", answerResp, true)
 				if err != nil {
@@ -467,10 +473,9 @@ func HandleMessage(client *Client, msg []byte) {
 				
 			} else {
 				// send player selected message
-				playerSelect := struct { GameId string `json:"gameId"`
-										 PlayerId string `json:"playerId"`}{}
-				playerSelect.GameId = reqFull.GameId
-				playerSelect.PlayerId = newCurrPlayerId
+        g.CurrentPlayerId = newCurrPlayerId;
+        
+				playerSelect := struct { Game *game.Game `json:"game"`}{g}
 				
 				err = MarshalAndSend(client, "PLAYER_SELECTED", playerSelect, true)
 				if err != nil {
@@ -560,7 +565,7 @@ func MarshalAndSend(client *Client, header string, body interface{}, broadcast b
       if err != nil {
         return err
       }
-	  fmt.Println(mbytes)
+	  fmt.Println(string(mbytes))
 
       msg, err := MakeMessage(header, mbytes)
 
@@ -574,5 +579,6 @@ func MarshalAndSend(client *Client, header string, body interface{}, broadcast b
 }
 
 func SendError(client *Client, err error) {
+  fmt.Println("Sending Error: ", err);
   client.Send <- []byte(fmt.Sprintf("An error occured: %v", err))
 }
