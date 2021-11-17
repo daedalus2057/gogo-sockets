@@ -233,21 +233,23 @@ func SetNewCurrentPlayer(g *Game) (bool, string, error) {
 	}
 }
 
-func IncomingAnswer(gameId, clientId string, answerIndex uint8) (bool, string, *Game, error) {
+func IncomingAnswer(gameId, clientId string, answerIndex uint8) (bool, int, *Game, error) {
 	g, ok := GetGame(gameId)
 	if !ok {
-		return false, "", &Game{}, fmt.Errorf("In IncomingAnswer, Unknown game: %q", gameId)
+		return false, -1, &Game{}, fmt.Errorf("In IncomingAnswer, Unknown game: %q", gameId)
 	}
 
 	correct := false
 	player := g.GetPlayerByUuid(clientId)
 	if player != nil {
+    fmt.Printf("WTF %v=%v\n", g.currentQuestion.correctIndex, answerIndex)
 		correct := g.currentQuestion.correctIndex == answerIndex
 		player.updateScore(g.currentQuestion.PointValue, correct)
 	} // else (actually not an error)
 	  // client.go calls IncomingAnswer with a blank clientId if the question expires
-	
-	correctAnswer := g.currentQuestion.Choices[g.currentQuestion.correctIndex]
+
+    // save the correctIndex to return
+  correctIndex := g.currentQuestion.correctIndex
 	
 	// we are done with this question
 	questions.RemoveGameQuestion(gameId, g.currentQuestion.Category, g.currentQuestion.PointValue)
@@ -258,7 +260,7 @@ func IncomingAnswer(gameId, clientId string, answerIndex uint8) (bool, string, *
 		g.State = ENDED
 	}
 	
-	return correct, correctAnswer, g, nil
+	return correct, int(correctIndex), g, nil
 }
 
 

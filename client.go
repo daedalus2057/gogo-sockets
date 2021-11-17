@@ -459,13 +459,13 @@ func HandleMessage(client *Client, msg []byte) {
 				
 				// send answer response message
 				answerResp := struct { Correct bool `json:"correct"`
-									   CorrectAnswer string `json:"correctAnswer"`
+									   CorrectAnswer int `json:"correctAnswer"`
 									   Game *game.Game `json:"game"`}{}				
 				answerResp.Correct = correct
 				answerResp.CorrectAnswer = correctAnswer
 				answerResp.Game = ga
 				
-				err = MarshalAndSend(client, "ANSWER_RESPONSE", answerResp, true)
+				err = MarshalAndSendToGame(client, g, "ANSWER_RESPONSE", answerResp)
 				if err != nil {
 				  SendError(client, err)
 				  return
@@ -477,7 +477,7 @@ func HandleMessage(client *Client, msg []byte) {
         
 				playerSelect := struct { Game *game.Game `json:"game"`}{g}
 				
-				err = MarshalAndSend(client, "PLAYER_SELECTED", playerSelect, true)
+				err = MarshalAndSendToGame(client, g, "PLAYER_SELECTED", playerSelect)
 				if err != nil {
 				  SendError(client, err)
 				  return
@@ -498,7 +498,7 @@ func HandleMessage(client *Client, msg []byte) {
 		// TODO: determine if the answer was correct and then send the
 		// answer message back to everyone
 		// call IncomingAnswer with no cliendId
-		correct, correctAnswer, gls, err := game.IncomingAnswer(reqFull.GameId,
+		correct, correctAnswer, g, err := game.IncomingAnswer(reqFull.GameId,
 																client.ClientId,
 																reqFull.AnswerIndex)
 		if err != nil {
@@ -507,20 +507,32 @@ func HandleMessage(client *Client, msg []byte) {
 		
 		// send answer response message
 		answerResp := struct { Correct bool `json:"correct"`
-							   CorrectAnswer string `json:"correctAnswer"`
+							   CorrectAnswer int `json:"correctAnswer"`
 							   Game *game.Game `json:"game"`}{}				
 		answerResp.Correct = correct
 		answerResp.CorrectAnswer = correctAnswer
-		answerResp.Game = gls
+		answerResp.Game = g
 		
-		err = MarshalAndSend(client, "ANSWER_RESPONSE", answerResp, true)
+		err = MarshalAndSendToGame(client, g, "ANSWER_RESPONSE", answerResp)
 		if err != nil {
 		  SendError(client, err)
 		  return
 		}
 		
-		if gls.State == game.ENDED {
-			game.RemoveGame(gls.GameId)
+		if g.State == game.ENDED {
+			game.RemoveGame(g.GameId)
+      gls, err := game.AllGames()
+      if err != nil {
+        SendError(client, err)
+        return
+      }
+      err = MarshalAndSend(client, "GAMES", gls, true);
+      if err != nil {
+        SendError(client, err)
+        return
+      }
+
+      return
 		}
 	  default:
 	    fmt.Println("unknown req type")
@@ -528,7 +540,6 @@ func HandleMessage(client *Client, msg []byte) {
   default:
     SendError(client, fmt.Errorf("Unknown message header %q", header))
   }
-
 }
 
 func MakeMessage(header string, body []byte) ([]byte, error) {
