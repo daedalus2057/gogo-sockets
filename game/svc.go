@@ -242,14 +242,14 @@ func IncomingAnswer(gameId, clientId string, answerIndex uint8) (bool, int, *Gam
 	correct := false
 	player := g.GetPlayerByUuid(clientId)
 	if player != nil {
-    fmt.Printf("WTF %v=%v\n", g.currentQuestion.correctIndex, answerIndex)
-		correct := g.currentQuestion.correctIndex == answerIndex
+		fmt.Printf("WTF %v=%v\n", g.currentQuestion.correctIndex, answerIndex)
+		correct = g.currentQuestion.correctIndex == answerIndex
 		player.updateScore(g.currentQuestion.PointValue, correct)
 	} // else (actually not an error)
 	  // client.go calls IncomingAnswer with a blank clientId if the question expires
 
     // save the correctIndex to return
-  correctIndex := g.currentQuestion.correctIndex
+	correctIndex := g.currentQuestion.correctIndex
 	
 	// we are done with this question
 	questions.RemoveGameQuestion(gameId, g.currentQuestion.Category, g.currentQuestion.PointValue)
