@@ -360,6 +360,44 @@ func HandleMessage(client *Client, msg []byte) {
       return
     }
 
+  case "NEXT_ROUND":
+    // we should have a game id
+    body := struct {
+      GameId string
+    }{}
+
+    err := json.Unmarshal(msg[32:], &body)
+    if err != nil {
+      SendError(client, err)
+      return
+    }
+
+    g, ok := game.GetGame(body.GameId)
+
+    if !ok {
+      SendError(client, fmt.Errorf("Unknown gameId: %v", body.GameId))
+      return
+    }
+
+    err = MarshalAndSendToGame(client, g, "START_ROUND", g)
+    if err != nil {
+      SendError(client, err)
+      return
+    }
+
+    // broadcast the new game list
+    gls, err := game.AllGames()
+    if err != nil {
+      SendError(client, err)
+      return
+    }
+
+    err = MarshalAndSend(client, "GAMES", gls, true)
+    if err != nil {
+      SendError(client, err)
+      return
+    }
+
   case "GAMEPLAY":
     // unmarshal the message to get the gameplay req type
     reqPart := struct { Request string `json:"request"`
@@ -492,7 +530,7 @@ func HandleMessage(client *Client, msg []byte) {
 	  case "ANSWER":
 		reqFull := struct { Request string `json:"request"`
 							GameId string `json:"gameId"`
-							AnswerIndex uint8 `json:"index"`}{}
+							AnswerIndex uint8	`json:"index"`}{}
 		err := json.Unmarshal(msg[32:], &reqFull)
 		if err != nil {
 			SendError(client, err)
@@ -540,6 +578,7 @@ func HandleMessage(client *Client, msg []byte) {
 	  default:
 	    fmt.Println("unknown req type")
 	}
+
   default:
     SendError(client, fmt.Errorf("Unknown message header %q", header))
   }

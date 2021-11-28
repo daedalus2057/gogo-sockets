@@ -199,6 +199,11 @@ func RegisterBuzz(gameId, clientId string, delay uint32, expired bool) (bool, er
 		return false, fmt.Errorf("In RegisterBuzz, Unknown game: %q", gameId)
 	}
 	
+  // TODO: is there a race condition here? Get the game is threadsafe
+  // but modifying the game data is not thread safe. 
+  // TODO: move all game data modification to an upsert call
+  // see: Upsert in concurrent-map code.
+
 	buzz := Buzz{
 		playerId: clientId,
 		delay: delay,
@@ -242,7 +247,7 @@ func IncomingAnswer(gameId, clientId string, answerIndex uint8) (bool, int, *Gam
 	correct := false
 	player := g.GetPlayerByUuid(clientId)
 	if player != nil {
-		fmt.Printf("WTF %v=%v\n", g.currentQuestion.correctIndex, answerIndex)
+    fmt.Printf("WTF %v=%v\n", g.currentQuestion.correctIndex, answerIndex)
 		correct = g.currentQuestion.correctIndex == answerIndex
 		player.updateScore(g.currentQuestion.PointValue, correct)
 	} // else (actually not an error)
