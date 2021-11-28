@@ -38,6 +38,9 @@ var (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	//CheckOrigin: func(r *http.Request) bool {
+    //    return true
+    //},
 }
 
 // Client is a middleman between the websocket connection and the hub.
@@ -489,7 +492,7 @@ func HandleMessage(client *Client, msg []byte) {
 	  case "ANSWER":
 		reqFull := struct { Request string `json:"request"`
 							GameId string `json:"gameId"`
-							AnswerIndex uint8	`json:"answerIndex"`}{}
+							AnswerIndex uint8 `json:"index"`}{}
 		err := json.Unmarshal(msg[32:], &reqFull)
 		if err != nil {
 			SendError(client, err)
