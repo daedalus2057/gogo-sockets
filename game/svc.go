@@ -45,6 +45,28 @@ func GetGame(gameId string) (*Game, bool) {
   return g, true
 }
 
+func SetGameState(gameId string, state GameState) *Game {
+  v := gMap.Upsert(
+    gameId, 
+    nil, 
+    func(exist bool, valInMap, newVal interface{}) interface{} {
+      xg, ok := (valInMap).(*Game)
+      if !ok {
+        panic("Setting game state on a game not in map")
+      }
+
+      xg.State = state
+      return xg
+    })
+
+  g, ok := (v).(*Game)
+  if !ok {
+    panic("Setting game state on a game not in map")
+  }
+
+  return g
+}
+
 func RemoveGame(gameId string) {
 	
 	gMap.Remove(gameId)
@@ -188,54 +210,101 @@ func QuestionSelect(gameId, category string, pointValue uint8) (Question, error)
 	}
 	
 	g.currentQuestion = &qSend
+  g.State = QUESTION
 	
 	return qSend, nil
 }
 
 
-func RegisterBuzz(gameId, clientId string, delay uint32, expired bool) (bool, error) {
-	g, ok := GetGame(gameId)
-	if !ok {
-		return false, fmt.Errorf("In RegisterBuzz, Unknown game: %q", gameId)
-	}
-	
-  // TODO: is there a race condition here? Get the game is threadsafe
-  // but modifying the game data is not thread safe. 
-  // TODO: move all game data modification to an upsert call
-  // see: Upsert in concurrent-map code.
+func RegisterBuzz(gameId, clientId string, delay uint32, expired bool) (bool) {
+  // type UpsertCb func(exist bool, valueInMap interface{}, newValue interface{}) interface{}
+  // Upsert(key string, value interface{}, cb UpsertCb) (res interface{}) 
+  v := gMap.Upsert(gameId, nil, func(exist bool, valInMap interface{}, newVal interface{}) interface{} {
+      if (!exist) {
+        panic("Registering a buzz on a non-existent game")
+      }
 
-	buzz := Buzz{
-		playerId: clientId,
-		delay: delay,
-		expired: expired,
-	}
-	
-	g.currentQuestion.buzzes = append(g.currentQuestion.buzzes, &buzz)
+      existingGame, ok := valInMap.(*Game)
+      if !ok {
+        panic("Registering a buzz on an invalid game in map")
+      }
+
+      if existingGame.currentQuestion == nil {
+        panic("Registering a buzz on a nil currentQuestion")
+      }
+
+	    if len(existingGame.currentQuestion.buzzes) == 3 {
+        //panic("Registering a buzz on a game with 3 buzzes")
+        fmt.Println("registering a buzz on a game with 3 buzzes, clientId: ", clientId)
+        return existingGame
+      }
+
+      buzz := Buzz{
+        playerId: clientId,
+        delay: delay,
+        expired: expired,
+      }
+
+      existingGame.currentQuestion.buzzes = append(
+        existingGame.currentQuestion.buzzes, &buzz)
+
+      return existingGame
+  })
+  
+  g, ok := (v).(*Game)
+  if !ok {
+    panic("Got something other than a *Game from map upsert")
+  }
 
 	if len(g.currentQuestion.buzzes) == 3 {
-		return true, nil
+		return true 
 	} else {
-		return false, nil
+		return false  
 	}
 }
 
-func SetNewCurrentPlayer(g *Game) (bool, string, error) {
+func SetNewCurrentPlayer(g *Game) (bool, *Game, error) {
+
+  expired := true
 	
-	minDelay := uint32(0xFFFFFFFF)
-	retId := ""
-	for _, buzz := range(g.currentQuestion.buzzes) {
-		if !buzz.expired && buzz.delay < minDelay {
-			minDelay = buzz.delay
-			retId = buzz.playerId
-		}
-	}
-	
-	if retId != "" {
-		g.SetCurrentPlayer(retId)
-		return false, retId, nil
-	} else {
-		return true, retId, nil
-	}
+  v := gMap.Upsert(g.GameId, g, func(exist bool, valInMap, newVal interface{}) interface{} {
+    bestTime := uint32(1 << 16)
+    existingGame, ok := (valInMap).(*Game)
+    if !ok {
+      panic("Non-*Game in map")
+    }
+
+    // default to the existing current player
+    winner := existingGame.CurrentPlayerId
+
+    if existingGame.currentQuestion == nil {
+      panic("Setting current player with a nil currentQuestion")
+    }
+
+    for _, b := range existingGame.currentQuestion.buzzes {
+      if b.delay < bestTime  {
+        bestTime = b.delay
+        winner = b.playerId
+        expired = false
+      }
+    }
+
+    if bestTime == 1 << 16 {
+      // no change, current player is current player
+      return existingGame
+    }
+
+    existingGame.SetCurrentPlayer(winner)
+
+    return existingGame
+  })
+
+  g, ok := (v).(*Game)
+  if !ok {
+    panic("Non-*Game retured from set currentplayer upsert")
+  }
+
+  return expired, g, nil
 }
 
 func IncomingAnswer(gameId, clientId string, answerIndex uint8) (bool, int, *Game, error) {
@@ -247,7 +316,6 @@ func IncomingAnswer(gameId, clientId string, answerIndex uint8) (bool, int, *Gam
 	correct := false
 	player := g.GetPlayerByUuid(clientId)
 	if player != nil {
-    fmt.Printf("WTF %v=%v\n", g.currentQuestion.correctIndex, answerIndex)
 		correct = g.currentQuestion.correctIndex == answerIndex
 		player.updateScore(g.currentQuestion.PointValue, correct)
 	} // else (actually not an error)

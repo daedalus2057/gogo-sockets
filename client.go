@@ -363,7 +363,7 @@ func HandleMessage(client *Client, msg []byte) {
   case "NEXT_ROUND":
     // we should have a game id
     body := struct {
-      GameId string
+      GameId string `json:"gameId"`
     }{}
 
     err := json.Unmarshal(msg[32:], &body)
@@ -372,12 +372,7 @@ func HandleMessage(client *Client, msg []byte) {
       return
     }
 
-    g, ok := game.GetGame(body.GameId)
-
-    if !ok {
-      SendError(client, fmt.Errorf("Unknown gameId: %v", body.GameId))
-      return
-    }
+    g  := game.SetGameState(body.GameId, game.SPIN)
 
     err = MarshalAndSendToGame(client, g, "START_ROUND", g)
     if err != nil {
@@ -453,80 +448,99 @@ func HandleMessage(client *Client, msg []byte) {
 		if err != nil {
 			SendError(client, err)
 		}
+
+    g := game.SetGameState(reqFull.GameId, game.QUESTION) 
 		
 		// send question to everyone
-		err = MarshalAndSend(client, "QUESTION_RESPONSE", q, true)
-        if err != nil {
-          SendError(client, err)
-          return
-        }
+		err = MarshalAndSend(client, "QUESTION_RESPONSE", struct{ 
+      Question *game.Question `json:"question"`
+      Game *game.Game `json:"game"`
+    }{&q, g}, true)
+
+    if err != nil {
+      SendError(client, err)
+      return
+    }
 		
 	  case "BUZZ":
-		reqFull := struct { Request string `json:"request"`
-							GameId string `json:"gameId"`
-							Delay uint32		`json:"delay"`
-							Expired bool		`json:"expired"`}{}
-		err := json.Unmarshal(msg[32:], &reqFull)
-		if err != nil {
-			SendError(client, err)
-		}
-		
-		// TODO: register the buzz, if this is the third buzz then choose
+		// register the buzz, if this is the third buzz then choose
 		// the current player and send the question to everyone
     // send this buzz to the game
-    err = MarshalAndSendToGame(client, g, "BUZZED", struct{ 
-      PlayerId string `json:"playerId"`
-      Delay uint32 `json:"delay"`}{ client.ClientId, reqFull.Delay })
-		
-		choosePlayer, err := game.RegisterBuzz(reqFull.GameId, 
-											   client.ClientId, 
-											   reqFull.Delay, 
-											   reqFull.Expired)
-		if err != nil {
+    // we exepect the clients to all buzz -- we will wait forever for
+    // the third buzz. If the client expires then the delay will be
+    // 1 << 16 -- if all buzz are 1 << 16 the question is over.
+		reqFull := struct { Request string `json:"request"`
+							GameId string `json:"gameId"`
+							Delay uint32		`json:"delay"`}{}
+		err := json.Unmarshal(msg[32:], &reqFull)
+    if err != nil { // TODO: this can lead to a hung game, add handling in client
 			SendError(client, err)
 		}
 		
-		if choosePlayer {
-			
-			expired, newCurrPlayerId, err := game.SetNewCurrentPlayer(g)
-			if expired {
-				// call IncomingAnswer with no cliendId
-				correct, correctAnswer, ga, err := game.IncomingAnswer(reqFull.GameId,
-																		"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-																		0)
-				if err != nil {
-					SendError(client, err)
-				}
-				
-				// send answer response message
-				answerResp := struct { Correct bool `json:"correct"`
-									   CorrectAnswer int `json:"correctAnswer"`
-									   Game *game.Game `json:"game"`}{}				
-				answerResp.Correct = correct
-				answerResp.CorrectAnswer = correctAnswer
-				answerResp.Game = ga
-				
-				err = MarshalAndSendToGame(client, g, "ANSWER_RESPONSE", answerResp)
-				if err != nil {
-				  SendError(client, err)
-				  return
-				}
-				
-			} else {
-				// send player selected message
-        g.CurrentPlayerId = newCurrPlayerId;
-        
-				playerSelect := struct { Game *game.Game `json:"game"`}{g}
-				
-				err = MarshalAndSendToGame(client, g, "PLAYER_SELECTED", playerSelect)
-				if err != nil {
-				  SendError(client, err)
-				  return
-				}
-			}
-		
-		} // else, do nothing
-		
+    // do we have 3 buzzes? 
+    choosePlayer := game.RegisterBuzz(reqFull.GameId, client.ClientId, reqFull.Delay, reqFull.Delay == 1 << 16)
+
+
+    // no?
+    if !choosePlayer {
+      // is this buzz a timeout?
+      if reqFull.Delay != 1 << 16  { // no
+        // send this buzz to the other clients
+        err = MarshalAndSendToGame(client, g, "BUZZED", struct{ 
+          PlayerId string `json:"playerId"`
+          Delay uint32 `json:"delay"`}{ client.ClientId, reqFull.Delay })
+        // return
+        return
+      }
+      // yes, it is a timeout?
+      // return and wait for more buzzes
+      return
+    }
+
+    // yes, there are 3 buzzes?
+    // what is the best buzz?
+    // select the player based on the best buzz or timeout
+    // handled in SetNewCurrentPlayer
+    expired, g, err := game.SetNewCurrentPlayer(g)
+    // did all buzzes happen as a timeout?
+    if expired { // yes?
+      // cancel question, send answer
+      // call IncomingAnswer with no cliendId
+      correct, correctAnswer, ga, err := game.IncomingAnswer(reqFull.GameId,
+      "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+      0)
+      if err != nil {
+        SendError(client, err)
+      }
+
+      // send answer response message
+      answerResp := struct { Correct bool `json:"correct"`
+      CorrectAnswer int `json:"correctAnswer"`
+      Game *game.Game `json:"game"`}{}				
+      answerResp.Correct = correct
+      answerResp.CorrectAnswer = correctAnswer
+      answerResp.Game = ga
+
+      err = MarshalAndSendToGame(client, g, "ANSWER_RESPONSE", answerResp)
+      if err != nil {
+        SendError(client, err)
+        return
+      }
+
+      return
+    }
+
+    // no, not a timeout
+    // send upate selected player to all clients
+    playerSelect := struct { Game *game.Game `json:"game"`}{g}
+
+    err = MarshalAndSendToGame(client, g, "PLAYER_SELECTED", playerSelect)
+    if err != nil {
+      SendError(client, err)
+      return
+    }
+  
+
 	  case "ANSWER":
 		reqFull := struct { Request string `json:"request"`
 							GameId string `json:"gameId"`

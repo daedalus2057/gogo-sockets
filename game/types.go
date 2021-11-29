@@ -7,6 +7,7 @@ const (
   STARTED
   ENDED
   SPIN
+  QUESTION
 )
 
 type Player struct {
