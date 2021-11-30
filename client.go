@@ -372,6 +372,7 @@ func HandleMessage(client *Client, msg []byte) {
       return
     }
 
+
     g  := game.SetGameState(body.GameId, game.SPIN)
 
     err = MarshalAndSendToGame(client, g, "START_ROUND", g)
@@ -524,6 +525,22 @@ func HandleMessage(client *Client, msg []byte) {
       err = MarshalAndSendToGame(client, g, "ANSWER_RESPONSE", answerResp)
       if err != nil {
         SendError(client, err)
+        return
+      }
+
+      if g.State == game.ENDED {
+        game.RemoveGame(g.GameId)
+        gls, err := game.AllGames()
+        if err != nil {
+          SendError(client, err)
+          return
+        }
+        err = MarshalAndSend(client, "GAMES", gls, true);
+        if err != nil {
+          SendError(client, err)
+          return
+        }
+
         return
       }
 
