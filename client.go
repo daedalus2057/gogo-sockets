@@ -19,7 +19,7 @@ const (
 	writeWait = 10 * time.Second
 
 	// Time allowed to read the next pong message from the peer.
-	pongWait = 60 * time.Second
+	pongWait = 2 * time.Second
 
 	// Send pings to peer with this period. Must be less than pongWait.
 	pingPeriod = (pongWait * 9) / 10
@@ -64,8 +64,35 @@ type Client struct {
 // reads from this goroutine.
 func (c *Client) readPump() {
 	defer func() {
+		g, remove := game.RemovePlayer(c.ClientId)
 		c.Hub.unregister <- c
 		c.Conn.Close()
+		
+		if g != nil {
+			if remove {
+				// TODO: send the remaining players a game abandoned message
+				// ...
+			
+				game.RemoveGame(g.GameId)
+				gls, err := game.AllGames()
+				if err != nil {
+					// TODO: not sure what happens if you try to send an error back to a disconnected client
+					//SendError(c, err)
+					return
+				}
+				
+				// since its broadcast it shouldn't matter that the client is not active
+				err = MarshalAndSend(c, "GAMES", gls, true)
+				if err != nil {
+					//SendError(c, err)
+					return
+				}
+			
+			} else {
+				// not sure yet what to do yet if there are still players left in the game
+				//game.RemoveGame(g.GameId)
+			}
+		}
 	}()
 	c.Conn.SetReadLimit(maxMessageSize)
 	c.Conn.SetReadDeadline(time.Now().Add(pongWait))

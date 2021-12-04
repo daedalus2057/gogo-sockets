@@ -67,6 +67,37 @@ func SetGameState(gameId string, state GameState) *Game {
   return g
 }
 
+// a player just disconnected, we need to remove them from the game
+func RemovePlayer(playerId string) (*Game, bool) {
+	
+	itms := gMap.Items()
+
+	for _, v  := range itms {
+      if g, ok := v.(*Game); ok {
+	    for i := 0; i < len(g.Players); i++ {
+	      if g.Players[i].PlayerId == playerId {
+			newPlayers := g.Players[:i]
+			newPlayers = append(newPlayers, g.Players[i+1:]...)
+			g.Players = newPlayers
+			break
+	      }
+	    }
+	  
+	    if len(g.Players) == 0 {
+	      // delete game
+		  return g, true
+	    } else {
+	      // for now just do the same thing
+		  // might change this later
+	      return g, false
+	    }
+	  }
+    }
+  
+    return nil, false
+  
+}
+
 func RemoveGame(gameId string) {
 	
 	gMap.Remove(gameId)
