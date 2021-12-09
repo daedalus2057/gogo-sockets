@@ -154,7 +154,7 @@ func GetGameQuestion(gameId, category string, pointVal uint8) Question {
 
 	if tmp, ok := gameQuestions.Get(gameId); ok {
 		m := tmp.(map[string][]*Question)
-		return *(m[category][(pointVal / 10)])
+		return *(m[category][((pointVal / 10) - 1)])
 	}
 
 	return Question{}
@@ -166,7 +166,7 @@ func RemoveGameQuestion(gameId, category string, pointVal uint8) {
 	if tmp, ok := gameQuestions.Get(gameId); ok {
 		m := tmp.(map[string][]*Question)
 		
-		m[category][(pointVal / 10)] = nil
+		m[category][((pointVal / 10) - 1)] = nil
 		
 		qFound := false
 		for i := 0; i < 5; i++ {
