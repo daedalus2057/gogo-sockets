@@ -104,12 +104,13 @@ func RemoveGame(gameId string) {
 
 }
 
-func CreateGame(host string) *Game {
+func CreateGame(host, hostname string, numCategories, questionsPerCategory uint8) *Game {
   gameId := uuid.NewString()
   
   // define the host player
   hostPlayer := &Player{
     PlayerId: host,
+	Name: hostname,
     Score: 0,
 	CurrentPlayer: true,
   }
@@ -122,8 +123,8 @@ func CreateGame(host string) *Game {
   game := &Game{
     GameId: gameId,
     Players: []*Player{ hostPlayer },
-    Categories: questions.GetGameCategories(gameId),
-	  RemainingQuestions: 30,
+    Categories: questions.GetGameCategories(gameId, numCategories, questionsPerCategory),
+	RemainingQuestions: (numCategories * questionsPerCategory),
     CurrentPlayerId: host,
   }
 
@@ -132,7 +133,7 @@ func CreateGame(host string) *Game {
   return game
 }
 
-func JoinGame(gameId, player string) (*Game, error) {
+func JoinGame(gameId, playerId, playerName string) (*Game, error) {
   g, ok := GetGame(gameId)
   if !ok {
     return nil, fmt.Errorf("In Join, Unknown game: %q", gameId)
@@ -140,7 +141,8 @@ func JoinGame(gameId, player string) (*Game, error) {
 
   // define the new player
   newPlayer := &Player{
-    PlayerId: player,
+    PlayerId: playerId,
+	Name: playerName,
 	Score: 0,
 	CurrentPlayer: false,
   }
@@ -156,7 +158,7 @@ func JoinGame(gameId, player string) (*Game, error) {
   g.Players = append(g.Players, newPlayer)
 
   if len(g.Players) == 3 {
-    g.State = STARTED
+    g.State = SPIN
   }
 
   gMap.Set(g.GameId, g)

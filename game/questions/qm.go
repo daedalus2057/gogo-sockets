@@ -84,7 +84,7 @@ func PopulateCategories() {
 	CategoriesInitialized = true
 }
 
-func GetGameCategories(gameId string) []string {
+func GetGameCategories(gameId string, numCategories, questionsPerCategory uint8) []string {
 
 	// from the available categories, randomly select 6 to play with
 	// TODO: kinda pointless when we only have six categories anyways
@@ -93,14 +93,14 @@ func GetGameCategories(gameId string) []string {
 	rand.Seed(time.Now().UnixNano())
 	var gameCats []string
 	p := rand.Perm(len(catList))
-	for _, r := range(p[:6]) {
+	for _, r := range(p[:numCategories]) {
 		gameCats = append(gameCats, catList[r])
 	}
 
 	cats := map[string][]*Question{}
 
 	for _, cat := range(gameCats) {
-		cats[cat] = getQuestionsForCategory(cat)
+		cats[cat] = getQuestionsForCategory(cat, questionsPerCategory)
 	}
 	
 	gameQuestions.Set(gameId, cats)
@@ -109,7 +109,7 @@ func GetGameCategories(gameId string) []string {
 
 } 
 
-func getQuestionsForCategory(givenCategory string) []*Question {
+func getQuestionsForCategory(givenCategory string, numQuestions uint8) []*Question {
 
 	catFileName := categoryMap[givenCategory]
 	catFile, err := os.Open(catFileName)
@@ -140,7 +140,7 @@ func getQuestionsForCategory(givenCategory string) []*Question {
 	for _, cat := range(data.Categories) {
 		if cat.CategoryName == givenCategory {
 			p := rand.Perm(len(cat.Questions))
-			for _, r := range(p[:5]) {
+			for _, r := range(p[:numQuestions]) {
 				selectedQuestions = append(selectedQuestions, cat.Questions[r])
 			}
 			break

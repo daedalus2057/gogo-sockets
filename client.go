@@ -264,8 +264,11 @@ func HandleMessage(client *Client, msg []byte) {
     }
 
   case "GAME_REQ":
-    req := struct { Action, GameId string }{}
-
+    req := struct { Action string
+					GameId string
+					Name string
+					NumCategories uint8
+					QuestionsPerCategory uint8 }{}
     err := json.Unmarshal(msg[32:], &req)
     if err != nil {
       SendError(client, err)
@@ -275,7 +278,7 @@ func HandleMessage(client *Client, msg []byte) {
     switch req.Action {
     case "CREATE":
       // this player will be the host
-      g := game.CreateGame(client.ClientId)
+      g := game.CreateGame(client.ClientId, req.Name, req.NumCategories, req.QuestionsPerCategory)
       err := MarshalAndSend(client, "START_WAIT", g, false)
       if err != nil {
         SendError(client, err)
@@ -298,17 +301,25 @@ func HandleMessage(client *Client, msg []byte) {
       return
     case "JOIN":
       // this player will be the host
-      g, err := game.JoinGame(req.GameId, client.ClientId)
+      g, err := game.JoinGame(req.GameId, client.ClientId, req.Name)
       if err != nil {
         SendError(client, err)
         return
       }
 
-      err = MarshalAndSendToGame(client, g, "START_WAIT", g)
-      if err != nil {
-        SendError(client, err)
-        return
-      }
+      if (len(g.Players) == 3) {
+	    err = MarshalAndSendToGame(client, g, "START_ROUND", g)
+		if err != nil {
+          SendError(client, err)
+          return
+        }
+	  } else {
+	    err = MarshalAndSendToGame(client, g, "START_WAIT", g)
+        if err != nil {
+          SendError(client, err)
+          return
+        }
+	  }
 
       // broadcast the new game list
       gls, err := game.AllGames()
