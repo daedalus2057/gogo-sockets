@@ -268,7 +268,8 @@ func HandleMessage(client *Client, msg []byte) {
 					GameId string
 					Name string
 					NumCategories uint8
-					QuestionsPerCategory uint8 }{}
+					QuestionsPerCategory uint8 
+          TotalQuestions uint8 }{}
     err := json.Unmarshal(msg[32:], &req)
     if err != nil {
       SendError(client, err)
@@ -278,7 +279,7 @@ func HandleMessage(client *Client, msg []byte) {
     switch req.Action {
     case "CREATE":
       // this player will be the host
-      g := game.CreateGame(client.ClientId, req.Name, req.NumCategories, req.QuestionsPerCategory)
+      g := game.CreateGame(client.ClientId, req.Name, req.NumCategories, req.QuestionsPerCategory, req.TotalQuestions)
       err := MarshalAndSend(client, "START_WAIT", g, false)
       if err != nil {
         SendError(client, err)
@@ -568,16 +569,16 @@ func HandleMessage(client *Client, msg []byte) {
 
       if g.State == game.ENDED {
         game.RemoveGame(g.GameId)
-        gls, err := game.AllGames()
-        if err != nil {
-          SendError(client, err)
-          return
-        }
-        err = MarshalAndSend(client, "GAMES", gls, true);
-        if err != nil {
-          SendError(client, err)
-          return
-        }
+        // gls, err := game.AllGames()
+        // if err != nil {
+        //   SendError(client, err)
+        //   return
+        // }
+        // err = MarshalAndSend(client, "GAMES", gls, true);
+        // if err != nil {
+        //   SendError(client, err)
+        //   return
+        // }
 
         return
       }
@@ -631,16 +632,16 @@ func HandleMessage(client *Client, msg []byte) {
 		
 		if g.State == game.ENDED {
 			game.RemoveGame(g.GameId)
-      gls, err := game.AllGames()
-      if err != nil {
-        SendError(client, err)
-        return
-      }
-      err = MarshalAndSend(client, "GAMES", gls, true);
-      if err != nil {
-        SendError(client, err)
-        return
-      }
+      // gls, err := game.AllGames()
+      // if err != nil {
+      //   SendError(client, err)
+      //   return
+      // }
+      // err = MarshalAndSend(client, "GAMES", gls, true);
+      // if err != nil {
+      //   SendError(client, err)
+      //   return
+      // }
 
       return
 		}

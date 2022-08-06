@@ -104,7 +104,7 @@ func RemoveGame(gameId string) {
 
 }
 
-func CreateGame(host, hostname string, numCategories, questionsPerCategory uint8) *Game {
+func CreateGame(host, hostname string, numCategories, questionsPerCategory, totalQuestions uint8) *Game {
   gameId := uuid.NewString()
   
   // define the host player
@@ -119,12 +119,19 @@ func CreateGame(host, hostname string, numCategories, questionsPerCategory uint8
   if !questions.CategoriesInitialized {
     questions.PopulateCategories()
   }
+
+  // remaining questions should be the requested total questions
+  // unless the requested total questions is more than the total 
+  // number of questions.
+  if (numCategories * questionsPerCategory) < totalQuestions {
+    totalQuestions = (numCategories * questionsPerCategory)
+  }
   
   game := &Game{
     GameId: gameId,
     Players: []*Player{ hostPlayer },
     Categories: questions.GetGameCategories(gameId, numCategories, questionsPerCategory),
-	RemainingQuestions: (numCategories * questionsPerCategory),
+	RemainingQuestions: totalQuestions,
     CurrentPlayerId: host,
   }
 
